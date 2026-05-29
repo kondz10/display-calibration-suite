@@ -1,0 +1,3849 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chromatic Data Analyser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #080808;
+  --surface: #0f0f0f;
+  --bg2: #0f0f0f;
+  --bg3: #141414;
+  --border: #1e1e1e;
+  --border2: #2a2a2a;
+  --text: #e0e0e0;
+  --text2: #888888;
+  --text3: #555555;
+  --accent: #8b15ba;
+  --accent2: #6e0f94;
+  --green: #33ff33;
+  --red: #ff3333;
+  --orange: #f0a050;
+  --R: #ff3333;
+  --G: #33ff33;
+  --B: #4488ff;
+  --W: #aaaaaa;
+  --radius: 10px;
+  --mono: 'Share Tech Mono', monospace;
+  --sans: 'Rajdhani', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(139,21,186,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139,21,186,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 40px 24px 60px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 52px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-icon {
+  width: 44px; height: 44px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 7px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.logo-icon span { border-radius: 2px; display: block; }
+.logo-r { background: #ff3333; }
+.logo-g { background: #33ff33; }
+.logo-b { background: #3333ff; }
+.logo-w { background: #ffffff; }
+.header-titles { display: flex; flex-direction: column; }
+.header h1 {
+  font-family: var(--mono);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.header-sub {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text3);
+  letter-spacing: 2px;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  width: fit-content;
+}
+.tab {
+  padding: 7px 18px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--text2);
+  transition: all .15s;
+  font-weight: 400;
+  position: relative;
+  overflow: hidden;
+}
+.tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 70%; height: 2px;
+  background: var(--accent);
+  transition: transform .15s;
+}
+.tab:hover { color: var(--text); }
+.tab:hover::after { transform: translateX(-50%) scaleX(1); }
+.tab.active {
+  background: rgba(139,21,186,0.15);
+  color: var(--accent);
+  border: 1px solid rgba(139,21,186,0.3);
+}
+.tab.active::after { transform: translateX(-50%) scaleX(1); }
+
+/* Channel tabs */
+.ch-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+.ch-tab {
+  padding: 7px 20px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all .15s;
+  font-family: var(--mono);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  position: relative;
+  overflow: hidden;
+}
+.ch-tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 70%; height: 2px;
+  transition: transform .15s;
+}
+.ch-tab.R { border-color: rgba(255,51,51,0.4); color: var(--R); }
+.ch-tab.G { border-color: rgba(51,255,51,0.4); color: var(--G); }
+.ch-tab.B { border-color: rgba(68,136,255,0.4); color: var(--B); }
+.ch-tab.W { border-color: rgba(170,170,170,0.4); color: var(--W); }
+.ch-tab.R::after { background: var(--R); }
+.ch-tab.G::after { background: var(--G); }
+.ch-tab.B::after { background: var(--B); }
+.ch-tab.W::after { background: var(--W); }
+.ch-tab.active.R { background: rgba(255,51,51,0.07); border-color: var(--R); }
+.ch-tab.active.G { background: rgba(51,255,51,0.07); border-color: var(--G); }
+.ch-tab.active.B { background: rgba(68,136,255,0.07); border-color: var(--B); }
+.ch-tab.active.W { background: rgba(170,170,170,0.07); border-color: var(--W); }
+.ch-tab.active::after { transform: translateX(-50%) scaleX(1); }
+
+/* Info box */
+.info-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text2);
+  line-height: 1.65;
+  letter-spacing: 0.5px;
+}
+.info-box strong { color: var(--text); font-weight: 600; }
+
+/* Paste area */
+.paste-section {
+  margin-bottom: 20px;
+}
+.paste-label {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.paste-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.paste-area {
+  width: 100%;
+  min-height: 90px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  resize: vertical;
+  transition: border-color .15s;
+}
+.paste-area:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.paste-area::placeholder { color: var(--text3); }
+.paste-hint {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 6px;
+  letter-spacing: 1px;
+}
+
+/* Grid of input cards */
+.grid8 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+@media (max-width: 700px) {
+  .grid8 { grid-template-columns: repeat(2, 1fr); }
+}
+
+.point-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  transition: border-color .15s;
+  position: relative;
+  overflow: hidden;
+}
+.point-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%; height: 2px;
+  background: var(--accent);
+  transition: transform .15s;
+}
+.point-card:hover { border-color: var(--border2); }
+.point-card:hover::after { transform: translateX(-50%) scaleX(1); }
+.point-card.has-data { border-color: var(--border2); }
+.point-card.has-data::after { transform: translateX(-50%) scaleX(1); }
+
+.point-label {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 10px;
+}
+.inp-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.inp-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  width: 16px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.inp-group input {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: var(--mono);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text);
+  transition: border-color .15s;
+  width: 0;
+}
+.inp-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.inp-group input::placeholder { color: var(--text3); font-size: 11px; }
+
+/* Buttons */
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+button {
+  padding: 8px 18px;
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+  overflow: hidden;
+}
+button::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 70%; height: 2px;
+  background: currentColor;
+  transition: transform .15s;
+}
+button:hover::after { transform: translateX(-50%) scaleX(1); }
+button.primary {
+  background: rgba(139,21,186,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(139,21,186,0.4);
+}
+button.primary:hover { background: rgba(139,21,186,0.18); border-color: var(--accent); }
+button.secondary {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border2);
+}
+button.secondary:hover { color: var(--text); border-color: var(--text3); }
+button.danger {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid rgba(255,51,51,.25);
+}
+button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51,51,.5); }
+
+/* Separator */
+.section-label {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Metrics */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.metric {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.metric::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%; height: 2px;
+  background: var(--accent);
+  transition: transform .2s;
+}
+.metric:hover::after { transform: translateX(-50%) scaleX(1); }
+.metric-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  margin-bottom: 6px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.metric-value {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--text);
+}
+.metric-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+  letter-spacing: 1px;
+}
+.leg-item { display: flex; align-items: center; gap: 6px; }
+.leg-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.leg-line {
+  width: 18px;
+  height: 2px;
+  flex-shrink: 0;
+}
+
+/* Chart */
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+  position: relative;
+}
+.chart-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text2);
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* Export */
+.export-area {
+  width: 100%;
+  height: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  resize: vertical;
+}
+
+/* Status badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.badge.good { background: rgba(51,255,51,.08); color: var(--green); border: 1px solid rgba(51,255,51,.2); }
+.badge.warn { background: rgba(255,51,51,.08); color: var(--red); border: 1px solid rgba(255,51,51,.2); }
+.badge.neutral { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+
+/* Tab indicator dot */
+.dot-R { background: var(--R); }
+.dot-G { background: var(--G); }
+.dot-B { background: var(--B); }
+.dot-W { background: var(--W); }
+
+/* Channel reset button */
+.ch-reset-btn {
+  margin-left: auto;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 400;
+  background: transparent;
+  color: var(--red);
+  border: 1px solid rgba(255,51,51,.25);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.ch-reset-btn:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51,51,.5); }
+
+/* Storage indicator */
+.storage-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  letter-spacing: 1px;
+}
+.storage-badge .dot-saved {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+/* Per-channel ΔE blocks */
+.de-ch-block {
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.de-ch-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.de-ch-name {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 4px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.de-ch-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.de-ch-charts {
+  display: flex;
+  gap: 0;
+}
+.de-ch-charts .chart-wrap {
+  border: none;
+  border-radius: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+.de-ch-charts .chart-wrap:last-child {
+  border-right: none;
+}
+
+/* APL grid */
+.apl-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+@media (max-width: 700px) {
+  .apl-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.apl-cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 8px 10px;
+  text-align: center;
+  transition: border-color .15s;
+  position: relative;
+  overflow: hidden;
+}
+.apl-cell::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%; height: 2px;
+  background: var(--orange);
+  transition: transform .15s;
+}
+.apl-cell:hover { border-color: var(--border2); }
+.apl-cell:hover::after { transform: translateX(-50%) scaleX(1); }
+.apl-cell.has-data { border-color: var(--border2); }
+.apl-cell.has-data::after { transform: translateX(-50%) scaleX(1); }
+.apl-cell-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--orange);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.apl-cell input {
+  width: 100%;
+  padding: 5px 6px;
+  font-size: 13px;
+  font-family: var(--mono);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text);
+  text-align: center;
+  transition: border-color .15s;
+}
+.apl-cell input:focus {
+  outline: none;
+  border-color: var(--orange);
+}
+.apl-cell input::placeholder { color: var(--text3); font-size: 11px; }
+
+/* Colour Checker */
+.cc-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 20px;
+}
+@media (max-width: 700px) {
+  .cc-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.cc-patch {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 8px 8px;
+  transition: border-color .15s;
+  position: relative;
+  overflow: hidden;
+}
+.cc-patch::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%; height: 2px;
+  background: var(--accent);
+  transition: transform .15s;
+}
+.cc-patch:hover { border-color: var(--border2); }
+.cc-patch:hover::after { transform: translateX(-50%) scaleX(1); }
+.cc-patch.has-data { border-color: var(--border2); }
+.cc-patch.has-data::after { transform: translateX(-50%) scaleX(1); }
+.cc-patch-swatch {
+  width: 100%;
+  height: 28px;
+  border-radius: 6px;
+  margin-bottom: 7px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: #1a1a1a;
+  transition: background .2s;
+}
+.cc-patch-name {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text3);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cc-patch .inp-group {
+  margin-bottom: 3px;
+}
+.cc-patch .inp-group input {
+  font-size: 11px;
+  padding: 3px 6px;
+}
+.cc-cie-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+  position: relative;
+}
+.cc-cie-canvas {
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.cc-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 4px 8px;
+  margin-top: 12px;
+}
+.cc-leg-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  letter-spacing: 1px;
+}
+.cc-leg-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.2);
+}
+.cc-delta-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 12px;
+  margin-bottom: 20px;
+}
+.cc-delta-table th {
+  text-align: left;
+  padding: 6px 10px;
+  color: var(--text3);
+  font-weight: 400;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-bottom: 1px solid var(--border);
+}
+.cc-delta-table td {
+  padding: 6px 10px;
+  color: var(--text2);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: middle;
+}
+.cc-delta-table tr:hover td { background: rgba(139,21,186,0.03); }
+.cc-swatch-cell {
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.08);
+  display: inline-block;
+  vertical-align: middle;
+}
+
+
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo-icon">
+      <span class="logo-r"></span>
+      <span class="logo-g"></span>
+      <span class="logo-b"></span>
+      <span class="logo-w"></span>
+    </div>
+    <div class="header-titles">
+      <h1>Chromatic Data Analyser</h1>
+      <span class="header-sub">CIE 1931 xyY · ΔE2000 · ΔE ITP</span>
+    </div>
+    <span class="storage-badge" id="storageBadge" style="display:none"><span class="dot-saved"></span>dane zapisane</span>
+  </div>
+
+  <div class="tabs" id="mainTabs">
+    <div class="tab active" onclick="switchMain('input')">Dane wejściowe</div>
+    <div class="tab" onclick="switchMain('chroma')">Chromatyczność</div>
+    <div class="tab" onclick="switchMain('rgbtrack')">RGB Tracking</div>
+    <div class="tab" onclick="switchMain('de')">Błędy ΔE</div>
+    <div class="tab" onclick="switchMain('grayscale')">Grayscale</div>
+    <div class="tab" onclick="switchMain('apl')">APL Brightness</div>
+    <div class="tab" onclick="switchMain('colorchecker')">Colour Checker</div>
+    <div class="tab" onclick="switchMain('export')">Eksport</div>
+  </div>
+
+  <!-- INPUT VIEW -->
+  <div id="view-input">
+    <div class="info-box">
+      Podaj dla każdego kanału (<strong>R, G, B</strong>, opcjonalnie <strong>W</strong>) po 8 punktów pomiarowych.<br>
+      Dla każdego punktu: <strong>x</strong>, <strong>y</strong> — chromatyczność CIE 1931, <strong>Y</strong> — luminancja [cd/m²].<br>
+      Poziomy sygnału RGB: <strong>0, 36, 73, 109, 146, 182, 219, 255</strong> (255 = 100%).
+    </div>
+
+    <!-- PASTE SECTION -->
+    <div class="paste-section">
+      <div class="paste-label">Wklej dane</div>
+      <textarea class="paste-area" id="pasteInput" placeholder="Wklej dane jako wiersze: x  y  Y (oddzielone spacją, tabulatorem lub przecinkiem)&#10;Przykład:&#10;0.3127  0.3290  0.01&#10;0.3135  0.3295  2.50&#10;0.3140  0.3298  10.2&#10;..."></textarea>
+      <div class="paste-hint">→ 8 wierszy dla aktualnie wybranego kanału. Separatory: spacja, tab, przecinek lub średnik.</div>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="secondary" onclick="parsePaste()">Importuj wklejone dane →</button>
+        <button class="secondary" onclick="clearPaste()">Wyczyść pole</button>
+      </div>
+    </div>
+
+    <div class="ch-tabs" id="chTabs">
+      <div class="ch-tab R active" onclick="switchCh('R')">R</div>
+      <div class="ch-tab G" onclick="switchCh('G')">G</div>
+      <div class="ch-tab B" onclick="switchCh('B')">B</div>
+      <div class="ch-tab W" onclick="switchCh('W')">W (opt.)</div>
+      <button class="ch-reset-btn" id="resetChBtn" onclick="clearChannel(currentCh)" title="Wyczyść dane aktualnego kanału">✕ Resetuj kanał</button>
+    </div>
+
+    <div id="chInputs"></div>
+
+    <div class="btn-row">
+      <button class="primary" onclick="calculate()">Oblicz i wyświetl wykresy →</button>
+      <button class="secondary" onclick="loadDemo()">Wczytaj demo</button>
+      <button class="danger" onclick="clearAll()">Wyczyść wszystko</button>
+    </div>
+  </div>
+
+  <!-- CHROMATICITY VIEW -->
+  <div id="view-chroma" style="display:none">
+    <div class="section-label">Odchylenie chromatyczności od D65</div>
+    <div class="legend" id="chromaLegend"></div>
+    <div class="chart-wrap">
+      <div class="chart-title">Δx — odchylenie współrzędnej x od D65 (x_D65 = 0.3127)</div>
+      <div style="height:220px"><canvas id="dxChart"></canvas></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Δy — odchylenie współrzędnej y od D65 (y_D65 = 0.3290)</div>
+      <div style="height:220px"><canvas id="dyChart"></canvas></div>
+    </div>
+    <div class="section-label">Podsumowanie</div>
+    <div class="metrics-grid" id="chromaCards"></div>
+  </div>
+
+  <!-- DE VIEW -->
+  <div id="view-de" style="display:none">
+    <div class="section-label">Błąd koloru względem punktu D65</div>
+    <div class="legend" id="deLegend"></div>
+    <div class="chart-wrap">
+      <div class="chart-title">ΔE2000 — drift względem punktu 100% kanału</div>
+      <div style="height:240px"><canvas id="de2Chart"></canvas></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">ΔE ITP — drift HDR względem punktu 100% kanału</div>
+      <div style="height:240px"><canvas id="deITPChart"></canvas></div>
+    </div>
+    <div class="section-grid" id="deCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:20px"></div>
+
+    <!-- Per-channel breakdown -->
+    <div class="section-label">Błędy ΔE per kanał</div>
+    <div class="info-box" style="margin-bottom:16px">
+      Wykresy poniżej pokazują ΔE2000 i ΔE ITP osobno dla każdego kanału (<strong>R, G, B, W</strong>).
+      Chromatyczność znormalizowana do Y=100 — błąd czysto barwny bez wpływu luminancji.
+    </div>
+    <div id="dePerChannelWrap"></div>
+  </div>
+
+
+  <!-- EXPORT VIEW -->
+  <div id="view-export" style="display:none">
+    <div class="info-box">
+      Trzy niezależne bloki eksportu danych — każdy w formacie gotowym do wklejenia z powrotem do odpowiedniego pola <strong>„Wklej dane"</strong>.<br>
+      Poniżej również eksport grafik PNG z białym tłem dla wszystkich widoków.
+    </div>
+
+    <!-- ── 4. Eksport grafik PNG ── -->
+    <div class="section-label">4 — Eksport grafik PNG (białe tło)</div>
+    <div class="info-box" style="border-left-color:#36b37e">
+      Każdy przycisk generuje i pobiera plik PNG z wykresem i podsumowaniem na <strong>białym tle</strong> — gotowy do raportu lub prezentacji.<br>
+      Wymagane: najpierw wygeneruj wykresy w odpowiednich zakładkach.
+    </div>
+    <div class="btn-row" style="flex-wrap:wrap;gap:8px">
+      <button class="secondary" onclick="exportPNG('chroma')" style="color:#33ff33;border-color:rgba(74,158,47,.4)">↓ Chromatyczność</button>
+      <button class="secondary" onclick="exportPNG('rgbtrack')" style="color:var(--R);border-color:rgba(216,90,48,.4)">↓ RGB Tracking</button>
+      <button class="secondary" onclick="exportPNG('de')" style="color:#4488ff;border-color:rgba(61,127,214,.4)">↓ Błędy ΔE</button>
+      <button class="secondary" onclick="exportPNG('grayscale')" style="color:var(--accent);border-color:rgba(139,21,186,.4)">↓ Grayscale</button>
+      <button class="secondary" onclick="exportPNG('apl')" style="color:var(--orange);border-color:rgba(240,160,80,.4)">↓ APL Brightness</button>
+      <button class="secondary" onclick="exportPNG('colorchecker')" style="color:#8b15ba;border-color:rgba(139,21,186,.4)">↓ Colour Checker</button>
+      <button class="primary" onclick="exportAllPNG()">↓ Pobierz wszystkie</button>
+    </div>
+    <!-- preview area -->
+    <div id="exportPngPreview" style="display:none;margin-top:16px">
+      <div class="section-label">Podgląd</div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;overflow:auto">
+        <canvas id="exportPreviewCanvas" style="max-width:100%;border:1px solid #ddd;display:block;margin:0 auto"></canvas>
+      </div>
+    </div>
+
+    <!-- ── 1. Dane wejściowe (R/G/B/W) ── -->
+    <div class="section-label" style="margin-top:28px">1 — Dane wejściowe (Balans bieli)</div>
+    <div class="info-box" style="border-left-color:var(--accent)">
+      Format: <code style="color:var(--text);font-family:var(--mono)">x&nbsp;&nbsp;y&nbsp;&nbsp;Y</code> · 8 wierszy na kanał.
+      Wklej do zakładki <strong>Dane wejściowe</strong> → pole „Wklej dane" przy wybranym kanale R / G / B / W.
+    </div>
+    <textarea class="export-area" id="exportArea" readonly style="height:320px;font-size:12px"></textarea>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="secondary" onclick="copyExport()">Kopiuj wszystko</button>
+      <button class="secondary" onclick="copyChannel('R')" style="color:var(--R);border-color:rgba(216,90,48,.4)">Kopiuj R</button>
+      <button class="secondary" onclick="copyChannel('G')" style="color:var(--G);border-color:rgba(74,158,47,.4)">Kopiuj G</button>
+      <button class="secondary" onclick="copyChannel('B')" style="color:var(--B);border-color:rgba(61,127,214,.4)">Kopiuj B</button>
+      <button class="secondary" onclick="copyChannel('W')" style="color:var(--W);border-color:rgba(138,136,128,.4)">Kopiuj W</button>
+      <button class="secondary" onclick="downloadCSV()">Pobierz CSV</button>
+    </div>
+
+    <!-- ── 2. APL Brightness ── -->
+    <div class="section-label" style="margin-top:28px">2 — APL Brightness</div>
+    <div class="info-box" style="border-left-color:var(--orange)">
+      Format: <code style="color:var(--text);font-family:var(--mono)">Y [cd/m²]</code> · 9 wierszy (APL 2% → 100%).
+      Wklej do zakładki <strong>APL Brightness</strong> → pole „Wklej dane".
+    </div>
+    <textarea class="export-area" id="exportAPL" readonly style="height:160px;font-size:12px"></textarea>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="secondary" onclick="copyExportAPL()" style="color:var(--orange);border-color:rgba(240,160,80,.4)">Kopiuj APL</button>
+    </div>
+
+    <!-- ── 3. Colour Checker ── -->
+    <div class="section-label" style="margin-top:28px">3 — Colour Checker</div>
+    <div class="info-box" style="border-left-color:#8b15ba">
+      Format: <code style="color:var(--text);font-family:var(--mono)">x&nbsp;&nbsp;y</code> · 24 wiersze (pola 1–24 ColorChecker).
+      Wklej do zakładki <strong>Colour Checker</strong> → pole „Wklej dane".
+    </div>
+    <textarea class="export-area" id="exportCC" readonly style="height:420px;font-size:12px"></textarea>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="secondary" onclick="copyExportCC()" style="color:#8b15ba;border-color:rgba(139,21,186,.4)">Kopiuj Colour Checker</button>
+    </div>
+  </div>
+  <!-- RGB TRACKING VIEW -->
+  <div id="view-rgbtrack" class="view" style="display:none">
+    <div class="info-box">
+      Wykres pokazuje <strong>gain kanałów R, G, B</strong> w funkcji poziomu szarości — tak jak w recenzjach TV (RTINGS, wybierz.tv).
+      Wartość <strong>100 = ideał</strong> (kanał dokładnie zgodny ze wzorcem D65/sRGB). Powyżej 100 — za dużo, poniżej — za mało.
+      Dane źródłowe: kanał <strong>W</strong> (pomiary szarości). Poziom 0 pomijany.
+    </div>
+
+    <div class="section-label">RGB Tracking — gain kanałów</div>
+    <div class="chart-wrap">
+      <div class="chart-title">Gain R / G / B [%] — wartość idealna: 100</div>
+      <div class="legend" style="margin-bottom:12px">
+        <div class="leg-item"><div class="leg-line" style="background:var(--R)"></div><span>Red gain</span></div>
+        <div class="leg-item"><div class="leg-line" style="background:var(--G)"></div><span>Green gain</span></div>
+        <div class="leg-item"><div class="leg-line" style="background:var(--B)"></div><span>Blue gain</span></div>
+        <div class="leg-item"><div class="leg-line" style="border-top:1px dashed rgba(255,255,255,0.3);height:0;margin-top:5px;width:18px"></div><span style="margin-left:2px">100% (ideał)</span></div>
+      </div>
+      <div style="height:500px"><canvas id="rgbTrackChart"></canvas></div>
+    </div>
+
+    <div class="section-label">Podsumowanie</div>
+    <div class="metrics-grid" id="rgbTrackCards"></div>
+  </div>
+</div>
+  <div id="view-grayscale" class="view" style="display:none">
+    <div class="info-box">
+      Analiza stabilności punktu bieli kanału <strong>W</strong> w funkcji jasności.
+      Wykres przedstawia dryft chromatyczności względem D65 (x=0.3127, y=0.3290) dla poziomów 36–255.
+      Poziom 0 jest pomijany jako punkt czerni bez wiarygodnych danych chromatyczności.
+    </div>
+
+    <div class="section-label">Tracking punktu bieli</div>
+    <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
+      <div class="chart-wrap" style="flex:1;margin-bottom:0;border:none;border-right:1px solid var(--border);border-radius:0">
+        <div class="chart-title">Δx i Δy od D65 w funkcji poziomu sygnału</div>
+        <div class="legend" style="margin-bottom:12px">
+          <div class="leg-item"><div class="leg-line" style="background:var(--accent)"></div><span>Δx od D65</span></div>
+          <div class="leg-item"><div class="leg-line" style="background:var(--green)"></div><span>Δy od D65</span></div>
+          <div class="leg-item"><div class="leg-line" style="background:rgba(255,255,255,0.25);border-top:1px dashed rgba(255,255,255,0.25);height:0;margin-top:5px"></div><span style="margin-left:2px">y=0 (D65)</span></div>
+        </div>
+        <div style="height:260px"><canvas id="gsTrackChart"></canvas></div>
+      </div>
+      <div class="chart-wrap" style="flex:1;margin-bottom:0;border:none;border-radius:0">
+        <div class="chart-title">WB ΔE2000 — dryft względem punktu 100% kanału W</div>
+        <div style="height:260px;margin-top:38px"><canvas id="gsDeChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-label">Podsumowanie</div>
+    <div class="metrics-grid" id="gsCards"></div>
+  </div>
+</div>
+
+  <!-- APL BRIGHTNESS VIEW -->
+  <div id="view-apl" style="display:none">
+    <div class="info-box">
+      Wpisz zmierzoną <strong>luminancję [cd/m²]</strong> dla każdego poziomu wypełnienia ekranu bielą (APL).<br>
+      Opcjonalnie podaj <strong>nazwę urządzenia</strong> — pojawi się w legendzie wykresu.<br>
+      APL levels: <strong>2% · 5% · 10% · 15% · 20% · 25% · 50% · 75% · 100%</strong>
+    </div>
+
+    <!-- Device name -->
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:20px">
+      <div style="flex:1;min-width:200px">
+        <div class="paste-label" style="margin-bottom:6px">Nazwa urządzenia</div>
+        <input id="aplDeviceName" type="text" placeholder="np. Samsung OLED S95F"
+          style="width:100%;padding:8px 10px;font-size:13px;font-family:var(--mono);background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);" />
+      </div>
+    </div>
+
+    <!-- APL paste section -->
+    <div class="paste-section">
+      <div class="paste-label">Wklej dane</div>
+      <textarea class="paste-area" id="aplPasteInput" placeholder="Wklej dane luminancji — każdy wiersz to jedna wartość [cd/m²]&#10;Jeśli wklejasz dane w formacie x  y  Y — kolumna Y zostanie odczytana automatycznie.&#10;Przykład (same wartości):&#10;1060&#10;1060&#10;1058&#10;...&#10;Przykład (z x y Y):&#10;0.3127  0.3290  1060&#10;0.3128  0.3291  1058&#10;..."></textarea>
+      <div class="paste-hint">→ 9 wierszy dla APL 2%–100%. Separatory: spacja, tab, przecinek lub średnik. Kolumny x i y są ignorowane.</div>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="secondary" onclick="aplParsePaste()">Importuj wklejone dane →</button>
+        <button class="secondary" onclick="document.getElementById('aplPasteInput').value=''">Wyczyść pole</button>
+      </div>
+    </div>
+
+    <!-- APL data grid -->
+    <div class="section-label">Dane pomiarowe — luminancja [cd/m²]</div>
+    <div class="apl-grid" id="aplGrid"></div>
+
+    <div class="btn-row" style="margin-top:4px">
+      <button class="primary" onclick="renderAPLChart()">Generuj wykres →</button>
+      <button class="secondary" onclick="aplLoadDemo()">Wczytaj demo</button>
+      <button class="danger" onclick="aplClear()">Wyczyść</button>
+    </div>
+
+    <!-- Chart area -->
+    <div id="aplChartArea" style="display:none">
+      <div class="section-label">Jasność matrycy</div>
+
+      <!-- Device label top right like the reference -->
+      <div class="chart-wrap" style="position:relative">
+        <div id="aplChartLabel" style="position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:12px;color:var(--orange);text-align:right;line-height:1.5;pointer-events:none;z-index:2;"></div>
+        <div style="height:320px"><canvas id="aplChart"></canvas></div>
+      </div>
+
+      <!-- Metrics row -->
+      <div class="section-label">Podsumowanie</div>
+      <div class="metrics-grid" id="aplMetrics"></div>
+    </div>
+  </div>
+
+  <!-- COLOUR CHECKER VIEW -->
+  <div id="view-colorchecker" style="display:none">
+    <div class="info-box">
+      Wprowadź zmierzone współrzędne <strong>x, y</strong> (CIE 1931) dla 24 pól kolorymetrycznych Macbeth ColorChecker.<br>
+      Punkty zostaną naniesione na diagram podkowy CIE 1931 wraz z referencjami idealnymi.<br>
+      Pola są wstępnie wypełnione <strong>wartościami referencyjnymi D50</strong> — zastąp je własnymi pomiarami.
+    </div>
+
+    <div class="section-label">Dane kolorymetryczne — 24 pola</div>
+
+    <!-- CC paste section -->
+    <div class="paste-section">
+      <div class="paste-label">Wklej dane</div>
+      <textarea class="paste-area" id="ccPasteInput" placeholder="Wklej dane chromatyczności — każdy wiersz to jedno pole (x  y lub x  y  Y).&#10;Luminancja Y jest ignorowana jeśli obecna. Wymagane 24 wiersze.&#10;Przykład (x y):&#10;0.4002  0.3504&#10;0.3773  0.3446&#10;...&#10;Przykład (x y Y):&#10;0.4002  0.3504  12.5&#10;0.3773  0.3446  35.2&#10;..."></textarea>
+      <div class="paste-hint">→ 24 wiersze dla 24 pól ColorCheckera. Separatory: spacja, tab, przecinek lub średnik. Kolumna Y jest ignorowana.</div>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="secondary" onclick="ccParsePaste()">Importuj wklejone dane →</button>
+        <button class="secondary" onclick="document.getElementById('ccPasteInput').value=''">Wyczyść pole</button>
+      </div>
+    </div>
+
+    <div class="cc-grid" id="ccGrid"></div>
+
+    <div class="btn-row">
+      <button class="primary" onclick="renderCCDiagram()">Aktualizuj diagram CIE →</button>
+      <button class="secondary" onclick="ccLoadRef()">Przywróć referencje</button>
+      <button class="danger" onclick="ccClear()">Wyczyść wszystko</button>
+    </div>
+
+    <!-- CIE diagram -->
+    <div class="section-label">Diagram CIE 1931 xy</div>
+    <div class="cc-cie-wrap">
+      <div class="chart-title">Przestrzeń barw CIE 1931 — pomiary vs referencja Macbeth ColorChecker</div>
+      <canvas id="ccCanvas" class="cc-cie-canvas" width="600" height="540"></canvas>
+      <div class="cc-legend-grid" id="ccLegend"></div>
+    </div>
+
+    <!-- Delta table -->
+    <div class="section-label">Odchylenia od referencji</div>
+    <div id="ccTableWrap"></div>
+  </div>
+
+<script>
+const LEVELS = ['0','36','73','109','146','182','219','255'];
+const LEVEL_PCT = [0,14.1,28.6,42.7,57.3,71.4,85.9,100];
+const CHANNELS = ['R','G','B','W'];
+const D65 = { x: 0.3127, y: 0.3290 };
+
+// Reference white XYZ (D65, Y=100)
+const D65_XYZ = xyYtoXYZ(D65.x, D65.y, 100);
+const D65_Lab = XYZtoLab(D65_XYZ.X, D65_XYZ.Y, D65_XYZ.Z);
+const D65_ITP = XYZtoICtCp(D65_XYZ.X, D65_XYZ.Y, D65_XYZ.Z);
+
+const COLORS = { R:'#ff3333', G:'#33ff33', B:'#4488ff', W:'#aaaaaa' };
+const DASHES = { R:[], G:[], B:[], W:[6,3] };
+
+let currentCh = 'R';
+let currentMain = 'input';
+const charts = {};
+
+const STORAGE_KEY = 'wba_data_v1';
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const badge = document.getElementById('storageBadge');
+    if (badge) badge.style.display = 'flex';
+  } catch(e) {}
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    CHANNELS.forEach(ch => {
+      if (saved[ch] && Array.isArray(saved[ch]) && saved[ch].length === LEVELS.length) {
+        data[ch] = saved[ch];
+      }
+    });
+    return true;
+  } catch(e) { return false; }
+}
+
+const data = {};
+CHANNELS.forEach(ch => { data[ch] = LEVELS.map(() => ({x:'',y:'',Y:''})); });
+loadFromStorage();
+
+// ─── Math helpers ────────────────────────────────────────────────────────────
+
+function xyYtoXYZ(x, y, Y) {
+  if (!y || y === 0) return { X: 0, Y: 0, Z: 0 };
+  return { X: (Y / y) * x, Y: Y, Z: (Y / y) * (1 - x - y) };
+}
+
+function XYZtoLab(X, Y, Z) {
+  const Xn = 95.047, Yn = 100, Zn = 108.883;
+  const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  const L = 116 * f(Y / Yn) - 16;
+  const a = 500 * (f(X / Xn) - f(Y / Yn));
+  const b = 200 * (f(Y / Yn) - f(Z / Zn));
+  return { L, a, b };
+}
+
+function dE2000(L1, a1, b1, L2, a2, b2) {
+  const dl = L2 - L1;
+  const C1 = Math.sqrt(a1*a1+b1*b1), C2 = Math.sqrt(a2*a2+b2*b2);
+  const Cab = (C1 + C2) / 2;
+  const Cab7 = Math.pow(Cab, 7);
+  const G = 0.5 * (1 - Math.sqrt(Cab7 / (Cab7 + Math.pow(25, 7))));
+  const a1p = a1*(1+G), a2p = a2*(1+G);
+  const C1p = Math.sqrt(a1p*a1p+b1*b1), C2p = Math.sqrt(a2p*a2p+b2*b2);
+  const dCp = C2p - C1p;
+  const h1p = Math.atan2(b1, a1p) * 180 / Math.PI + (Math.atan2(b1, a1p) < 0 ? 360 : 0);
+  const h2p = Math.atan2(b2, a2p) * 180 / Math.PI + (Math.atan2(b2, a2p) < 0 ? 360 : 0);
+  let dhp = h2p - h1p;
+  if (Math.abs(dhp) > 180) dhp += dhp < 0 ? 360 : -360;
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin(dhp * Math.PI / 360);
+  const Lbar = (L1 + L2) / 2;
+  const Cbar = (C1p + C2p) / 2;
+  let Hbar = (h1p + h2p) / 2;
+  if (Math.abs(h1p - h2p) > 180) Hbar += Hbar < 180 ? 180 : -180;
+  const T = 1 - 0.17*Math.cos((Hbar-30)*Math.PI/180) + 0.24*Math.cos(2*Hbar*Math.PI/180) + 0.32*Math.cos((3*Hbar+6)*Math.PI/180) - 0.20*Math.cos((4*Hbar-63)*Math.PI/180);
+  const SL = 1 + 0.015*Math.pow(Lbar-50,2)/Math.sqrt(20+Math.pow(Lbar-50,2));
+  const SC = 1 + 0.045*Cbar;
+  const SH = 1 + 0.015*Cbar*T;
+  const Cbar7 = Math.pow(Cbar, 7);
+  const RC = 2 * Math.sqrt(Cbar7 / (Cbar7 + Math.pow(25, 7)));
+  const dTheta = 30 * Math.exp(-Math.pow((Hbar - 275) / 25, 2));
+  const RT = -Math.sin(2 * dTheta * Math.PI / 180) * RC;
+  return Math.sqrt(Math.pow(dl/SL,2) + Math.pow(dCp/SC,2) + Math.pow(dHp/SH,2) + RT*(dCp/SC)*(dHp/SH));
+}
+
+function XYZtoICtCp(X, Y, Z) {
+  const m = [[0.3592,0.6976,-0.0358],[-0.1922,1.1004,0.0755],[0.0070,0.0749,0.8434]];
+  const L = m[0][0]*X + m[0][1]*Y + m[0][2]*Z;
+  const M = m[1][0]*X + m[1][1]*Y + m[1][2]*Z;
+  const S = m[2][0]*X + m[2][1]*Y + m[2][2]*Z;
+  const pq = v => {
+    const m1=0.1593017578125, m2=78.84375, c1=0.8359375, c2=18.8515625, c3=18.6875;
+    const n = Math.max(0, v / 10000);
+    return Math.pow((c1 + c2*Math.pow(n,m1)) / (1 + c3*Math.pow(n,m1)), m2);
+  };
+  const Lp = pq(L), Mp = pq(M), Sp = pq(S);
+  return { I:(Lp+Mp)/2, Ct:0.5*Lp-0.5*Mp, Cp:(6610*Lp-13613*Mp+7003*Sp)/4096 };
+}
+
+function dEITP(a, b) {
+  return 720 * Math.sqrt(Math.pow(a.I-b.I,2) + 0.25*Math.pow(a.Ct-b.Ct,2) + Math.pow(a.Cp-b.Cp,2));
+}
+
+function scaleWBDeltaE(de, levelPct) {
+  // Real ΔE values without any scaling/compression
+  return de;
+}
+
+// ─── Data helpers ────────────────────────────────────────────────────────────
+
+function parsePoint(ch, i) {
+  const d = data[ch][i];
+  const x = parseFloat(d.x), y = parseFloat(d.y), Y = parseFloat(d.Y);
+  if (isNaN(x) || isNaN(y) || isNaN(Y)) return null;
+  return { x, y, Y };
+}
+
+function getChannelResults(ch) {
+  const pts = LEVELS.map((_, i) => parsePoint(ch, i));
+  // Use the 100% point as channel reference for relative luminance
+  const ref100 = pts[pts.length - 1];
+  const Y100 = ref100 ? ref100.Y : null;
+
+  return pts.map(p => {
+    if (!p) return null;
+    const xyz = xyYtoXYZ(p.x, p.y, p.Y);
+    const lab = XYZtoLab(xyz.X, xyz.Y, xyz.Z);
+    const itp = XYZtoICtCp(xyz.X, xyz.Y, xyz.Z);
+
+    // Chromaticity deviation from D65
+    const dx = p.x - D65.x;
+    const dy = p.y - D65.y;
+
+    // WB ΔE liczone wyłącznie od chromatyczności
+    // luminancja zostaje znormalizowana do stałego Y=100
+
+    let de2 = 0;
+    let deITP = 0;
+
+    if (ref100) {
+
+      // aktualny punkt — stała luminancja
+      const normXYZ = xyYtoXYZ(p.x, p.y, 100);
+      const normLab = XYZtoLab(normXYZ.X, normXYZ.Y, normXYZ.Z);
+      const normITP = XYZtoICtCp(normXYZ.X, normXYZ.Y, normXYZ.Z);
+
+      // punkt referencyjny 100% — też stała luminancja
+      const refXYZ = xyYtoXYZ(ref100.x, ref100.y, 100);
+      const refLab = XYZtoLab(refXYZ.X, refXYZ.Y, refXYZ.Z);
+      const refITP = XYZtoICtCp(refXYZ.X, refXYZ.Y, refXYZ.Z);
+
+      de2 = dE2000(
+        refLab.L, refLab.a, refLab.b,
+        normLab.L, normLab.a, normLab.b
+      );
+
+      deITP = dEITP(refITP, normITP);
+    }
+
+    // Relative luminance vs channel's own 100% point
+    const relY = Y100 ? (p.Y / Y100 * 100) : null;
+
+    return { dx, dy, relY, de2, deITP, x: p.x, y: p.y, Y: p.Y };
+  });
+}
+
+function activeChannels() {
+  return CHANNELS.filter(ch => data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== ''));
+}
+
+// ─── UI helpers ──────────────────────────────────────────────────────────────
+
+function switchMain(v) {
+  currentMain = v;
+  const ids = ['input','chroma','rgbtrack','de','grayscale','apl','colorchecker','export'];
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ids[i] === v));
+  ids.forEach(id => {
+    const el = document.getElementById('view-'+id);
+    if (el) el.style.display = id === v ? '' : 'none';
+  });
+  setTimeout(() => {
+    if (['chroma','de'].includes(v)) renderCharts();
+    if (v === 'export') { initAPLGrid(); initColorChecker(); renderExport(); }
+    if (v === 'grayscale') renderGrayscale();
+    if (v === 'rgbtrack') renderRGBTracking();
+    if (v === 'apl') initAPLGrid();
+    if (v === 'colorchecker') { initColorChecker(); renderCCDiagram(); }
+  }, 0);
+}
+
+function switchCh(ch) {
+  currentCh = ch;
+  document.querySelectorAll('.ch-tab').forEach(t => {
+    t.classList.remove('active');
+    if (t.dataset.ch === ch) t.classList.add('active');
+  });
+  // Update reset button color
+  const resetBtn = document.getElementById('resetChBtn');
+  if (resetBtn) {
+    const chColors = { R: 'var(--R)', G: 'var(--G)', B: 'var(--B)', W: 'var(--W)' };
+    resetBtn.textContent = `✕ Resetuj ${ch}`;
+    resetBtn.style.color = chColors[ch] || 'var(--red)';
+    resetBtn.style.borderColor = chColors[ch] ? chColors[ch].replace('var(', 'rgba(').replace(')', ', .35)') : '';
+  }
+  renderInputs();
+}
+
+function renderInputs() {
+  const ch = currentCh;
+  const container = document.getElementById('chInputs');
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'grid8';
+  LEVELS.forEach((lv, i) => {
+    const d = data[ch][i];
+    const hasDat = d.x !== '' || d.y !== '' || d.Y !== '';
+    const card = document.createElement('div');
+    card.className = 'point-card' + (hasDat ? ' has-data' : '');
+    card.innerHTML = `<div class="point-label">Poziom ${lv}</div>
+      <div class="inp-group"><span class="inp-label">x</span><input type="number" step="0.0001" min="0" max="1" placeholder="0.3127" value="${d.x}" oninput="saveVal('${ch}',${i},'x',this.value)"></div>
+      <div class="inp-group"><span class="inp-label">y</span><input type="number" step="0.0001" min="0" max="1" placeholder="0.3290" value="${d.y}" oninput="saveVal('${ch}',${i},'y',this.value)"></div>
+      <div class="inp-group"><span class="inp-label">Y</span><input type="number" step="0.001" min="0" placeholder="cd/m²" value="${d.Y}" oninput="saveVal('${ch}',${i},'Y',this.value)"></div>`;
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+
+  // Update ch-tab dataset attrs
+  document.querySelectorAll('.ch-tab').forEach(t => {
+    const c = t.textContent.trim()[0];
+    t.dataset.ch = c;
+  });
+}
+
+function saveVal(ch, i, field, v) {
+  data[ch][i][field] = v;
+  // Update card highlight
+  const cards = document.querySelectorAll('.point-card');
+  if (cards[i]) {
+    const d = data[ch][i];
+    cards[i].classList.toggle('has-data', d.x !== '' || d.y !== '' || d.Y !== '');
+  }
+  saveToStorage();
+}
+
+// ─── Paste import ─────────────────────────────────────────────────────────────
+
+function parsePaste() {
+  const raw = document.getElementById('pasteInput').value.trim();
+  if (!raw) { alert('Pole wklejania jest puste.'); return; }
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  if (lines.length === 0) { alert('Nie znaleziono danych.'); return; }
+
+  const rows = [];
+  for (const line of lines) {
+    // Split by tab, comma, semicolon or multiple spaces
+    const parts = line.split(/[\t,;]+|\s{2,}|\s+/).map(p => p.trim()).filter(p => p !== '');
+    if (parts.length < 3) continue;
+    const x = parseFloat(parts[0]);
+    const y = parseFloat(parts[1]);
+    const Y = parseFloat(parts[2]);
+    if (!isNaN(x) && !isNaN(y) && !isNaN(Y)) rows.push({ x, y, Y });
+  }
+
+  if (rows.length === 0) {
+    alert('Nie udało się sparsować danych. Sprawdź format:\nx  y  Y\n(3 liczby w każdym wierszu)');
+    return;
+  }
+
+  if (rows.length > 8) {
+    alert(`Znaleziono ${rows.length} wierszy, zostanie użytych pierwszych 8.`);
+  }
+
+  const ch = currentCh;
+  for (let i = 0; i < 8; i++) {
+    if (rows[i]) {
+      data[ch][i] = { x: rows[i].x.toString(), y: rows[i].y.toString(), Y: rows[i].Y.toString() };
+    } else {
+      data[ch][i] = { x: '', y: '', Y: '' };
+    }
+  }
+  renderInputs();
+  saveToStorage();
+
+  const used = Math.min(rows.length, 8);
+  document.getElementById('pasteInput').value = '';
+  // small feedback
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = `✓ Zaimportowano ${used} punktów`;
+  btn.style.color = '#36b37e';
+  setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+}
+
+function clearPaste() {
+  document.getElementById('pasteInput').value = '';
+}
+
+// ─── Charts ───────────────────────────────────────────────────────────────────
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  // Zastąp canvas świeżym — Chart.js zapamiętuje stary element wewnętrznie
+  const oldCanvas = document.getElementById(id + 'Chart');
+  if (oldCanvas) {
+    const newCanvas = document.createElement('canvas');
+    newCanvas.id = oldCanvas.id;
+    oldCanvas.parentNode.replaceChild(newCanvas, oldCanvas);
+  }
+}
+
+function makeChartOptions(yLabel, yMin, yMax, refLine) {
+  const annotations = refLine !== undefined ? {
+    plugins: { annotation: { annotations: { ref: { type:'line', yMin:refLine, yMax:refLine, borderColor:'rgba(255,255,255,0.15)', borderWidth:1, borderDash:[4,4] } } } }
+  } : {};
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+      },
+      y: {
+        min: yMin !== undefined ? yMin : undefined,
+        max: yMax !== undefined ? yMax : undefined,
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } },
+        title: { display: true, text: yLabel, color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+      }
+    },
+    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+  };
+}
+
+function buildLegend(containerId, channels, showDash) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  channels.forEach(ch => {
+    const item = document.createElement('span');
+    item.className = 'leg-item';
+    if (showDash) {
+      const line = document.createElement('div');
+      line.className = 'leg-line';
+      line.style.background = COLORS[ch];
+      if (DASHES[ch].length) line.style.borderTop = '2px dashed ' + COLORS[ch];
+      else line.style.height = '2px';
+      item.appendChild(line);
+    } else {
+      const dot = document.createElement('div');
+      dot.className = 'leg-dot';
+      dot.style.background = COLORS[ch];
+      item.appendChild(dot);
+    }
+    const label = document.createElement('span');
+    label.textContent = ch === 'W' ? 'White' : 'Kanał ' + ch;
+    item.appendChild(label);
+    el.appendChild(item);
+  });
+}
+
+function renderCharts() {
+  const act = activeChannels();
+  if (act.length === 0) return;
+
+  const results = {};
+  act.forEach(ch => { results[ch] = getChannelResults(ch); });
+
+  // ── Chromaticity charts ──
+  buildLegend('chromaLegend', act, true);
+
+  const dxDatasets = act.map(ch => ({
+    label: ch,
+    data: (results[ch] || []).map(r => r ? parseFloat(r.dx.toFixed(5)) : null),
+    borderColor: COLORS[ch], backgroundColor: COLORS[ch] + '22',
+    borderWidth: 2, pointRadius: 4, pointBackgroundColor: COLORS[ch],
+    borderDash: DASHES[ch], spanGaps: false, fill: false
+  }));
+
+  const dyDatasets = act.map(ch => ({
+    label: ch,
+    data: (results[ch] || []).map(r => r ? parseFloat(r.dy.toFixed(5)) : null),
+    borderColor: COLORS[ch], backgroundColor: COLORS[ch] + '22',
+    borderWidth: 2, pointRadius: 4, pointBackgroundColor: COLORS[ch],
+    borderDash: DASHES[ch], spanGaps: false, fill: false
+  }));
+
+  destroyChart('dx');
+  destroyChart('dy');
+  charts['dx'] = new Chart(document.getElementById('dxChart'), {
+    type: 'line',
+    data: { labels: LEVELS, datasets: dxDatasets },
+    options: makeChartOptions('Δx od D65', undefined, undefined, 0)
+  });
+  charts['dy'] = new Chart(document.getElementById('dyChart'), {
+    type: 'line',
+    data: { labels: LEVELS, datasets: dyDatasets },
+    options: makeChartOptions('Δy od D65', undefined, undefined, 0)
+  });
+
+  // Summary cards for chroma
+  const chromaCards = document.getElementById('chromaCards');
+  chromaCards.innerHTML = '';
+  act.forEach(ch => {
+    const res = (results[ch] || []).filter(r => r);
+    if (!res.length) return;
+    const maxDx = Math.max(...res.map(r => Math.abs(r.dx))).toFixed(4);
+    const maxDy = Math.max(...res.map(r => Math.abs(r.dy))).toFixed(4);
+    const chromaError = Math.sqrt(
+      Math.pow(parseFloat(maxDx), 2) +
+      Math.pow(parseFloat(maxDy), 2)
+    );
+
+    let chromaStatus = '';
+    let chromaClass = 'good';
+
+    if (chromaError < 0.0015) {
+      chromaStatus = '✓ Referencyjna jakość';
+      chromaClass = 'good';
+    } else if (chromaError < 0.003) {
+      chromaStatus = '✓ Praktycznie niewidoczne';
+      chromaClass = 'good';
+    } else if (chromaError < 0.005) {
+      chromaStatus = '△ Lekko zauważalne';
+      chromaClass = 'neutral';
+    } else if (chromaError < 0.008) {
+      chromaStatus = '⚠ Widoczne odchylenia';
+      chromaClass = 'warn';
+    } else {
+      chromaStatus = '⚠ Duży błąd chromatyczności';
+      chromaClass = 'warn';
+    }
+
+    const c = document.createElement('div');
+    c.className = 'metric';
+    c.innerHTML = `<div class="metric-label" style="color:${COLORS[ch]}">Kanał ${ch}</div>
+      <div class="metric-value" style="font-size:16px">Δx=${maxDx}</div>
+      <div class="metric-sub">Δy maks = ${maxDy}</div>
+      <div class="metric-sub" style="margin-top:4px">Δxy ≈ ${chromaError.toFixed(4)}</div>
+      <div style="margin-top:6px"><span class="badge ${chromaClass}">${chromaStatus}</span></div>`;
+    chromaCards.appendChild(c);
+  });
+
+  // ── ΔE charts ──
+  buildLegend('deLegend', act, false);
+
+  const de2Datasets = act.map(ch => ({
+    label: `ΔE2000 ${ch}`,
+    data: (results[ch] || []).map(r => r ? parseFloat(r.de2.toFixed(3)) : null),
+    backgroundColor: COLORS[ch] + 'bb',
+    borderColor: COLORS[ch],
+    borderWidth: 1,
+    borderRadius: 3
+  }));
+
+  const deITPDatasets = act.map(ch => ({
+    label: `ΔEITP ${ch}`,
+    data: (results[ch] || []).map(r => r ? parseFloat(r.deITP.toFixed(3)) : null),
+    backgroundColor: COLORS[ch] + 'bb',
+    borderColor: COLORS[ch],
+    borderWidth: 1,
+    borderRadius: 3
+  }));
+
+  destroyChart('de2');
+  destroyChart('deITP');
+  charts['de2'] = new Chart(document.getElementById('de2Chart'), {
+    type: 'bar',
+    data: { labels: LEVELS, datasets: de2Datasets },
+    options: makeChartOptions('ΔE2000', 0)
+  });
+  charts['deITP'] = new Chart(document.getElementById('deITPChart'), {
+    type: 'bar',
+    data: { labels: LEVELS, datasets: deITPDatasets },
+    options: makeChartOptions('ΔE ITP', 0)
+  });
+
+
+  // ── WB ΔE charts (review style) ──
+  const wbChannel = act.includes('W') ? 'W' : act[0];
+
+  if (wbChannel && results[wbChannel]) {
+    const wbRes = results[wbChannel];
+
+    destroyChart('wbde');
+    destroyChart('wbitp');
+
+    charts['wbde'] = new Chart(document.getElementById('wbDeChart'), {
+      type: 'bar',
+      data: {
+        labels: LEVELS,
+        datasets: [{
+          label: 'WB ΔE2000',
+          data: wbRes.map((r, i) => {
+            if (!r) return null;
+
+            const lvl = LEVEL_PCT[i];
+            return parseFloat(scaleWBDeltaE(r.de2, lvl).toFixed(3));
+          }),
+          backgroundColor: COLORS[wbChannel] + 'cc',
+          borderColor: COLORS[wbChannel],
+          borderWidth: 1,
+          borderRadius: 3
+        }]
+      },
+      options: makeChartOptions('ΔE2000', 0)
+    });
+
+    charts['wbitp'] = new Chart(document.getElementById('wbItpChart'), {
+      type: 'bar',
+      data: {
+        labels: LEVELS,
+        datasets: [{
+          label: 'WB ΔE ITP',
+          data: wbRes.map((r, i) => {
+            if (!r) return null;
+
+            const lvl = LEVEL_PCT[i];
+            return parseFloat(scaleWBDeltaE(r.deITP, lvl).toFixed(3));
+          }),
+          backgroundColor: COLORS[wbChannel] + 'cc',
+          borderColor: COLORS[wbChannel],
+          borderWidth: 1,
+          borderRadius: 3
+        }]
+      },
+      options: makeChartOptions('ΔE ITP', 0)
+    });
+
+    const wbCards = document.getElementById('wbCards');
+    wbCards.innerHTML = '';
+
+    const valid = wbRes.filter(r => r);
+
+    if (valid.length) {
+      const avg = valid.reduce((a, r) => a + r.de2, 0) / valid.length;
+      const maxv = Math.max(...valid.map(r => r.de2));
+
+      const card = document.createElement('div');
+      card.className = 'metric';
+      card.innerHTML = `
+        <div class="metric-label">White Balance ΔE</div>
+        <div class="metric-value">${avg.toFixed(2)}</div>
+        <div class="metric-sub">średnia ΔE2000</div>
+        <div class="metric-sub" style="margin-top:6px">
+          Referencje jakości:
+          <br>• &lt; 1.0 → referencyjnie
+          <br>• &lt; 3.0 → bardzo dobrze
+          <br>• 3–5 → widoczne odchylenia
+          <br>• &gt; 5 → wymagana kalibracja
+        </div>
+
+        <div style="margin-top:6px">
+          <span class="badge ${maxv < 3 ? 'good' : 'warn'}">
+            ${maxv < 3 
+              ? `✓ max ΔE: ${maxv.toFixed(2)} (referencja < 3)` 
+              : `⚠ max ΔE: ${maxv.toFixed(2)} · cel: < 3.0`}
+          </span>
+        </div>
+      `;
+      wbCards.appendChild(card);
+    }
+  }
+
+
+  const deCards = document.getElementById('deCards');
+  deCards.innerHTML = '';
+  act.forEach(ch => {
+    const res = (results[ch] || []).filter(r => r);
+    if (!res.length) return;
+    const avgDe2 = (res.reduce((a, r) => a + r.de2, 0) / res.length).toFixed(2);
+    const maxDe2 = Math.max(...res.map(r => r.de2)).toFixed(2);
+    const avgITP = (res.reduce((a, r) => a + r.deITP, 0) / res.length).toFixed(1);
+    const maxITP = Math.max(...res.map(r => r.deITP)).toFixed(1);
+    const good2 = parseFloat(maxDe2) < 3;
+    const goodITP = parseFloat(maxITP) < 10;
+    const c = document.createElement('div');
+    c.className = 'metric';
+    c.innerHTML = `<div class="metric-label" style="color:${COLORS[ch]}">Kanał ${ch}</div>
+      <div class="metric-value">${avgDe2}</div>
+      <div class="metric-sub">ΔE2000 śr. · maks: ${maxDe2} <span class="badge ${good2?'good':'warn'}">${good2?'✓':'⚠'}</span></div>
+      <div class="metric-sub" style="margin-top:4px">ΔEITP: ${avgITP} śr. · ${maxITP} maks <span class="badge ${goodITP?'good':'warn'}">${goodITP?'✓':'⚠'}</span></div>`;
+    deCards.appendChild(c);
+  });
+
+  // ── Per-channel ΔE panels ──
+  renderDePerChannel(act, results);
+}
+
+function renderDePerChannel(act, results) {
+  const wrap = document.getElementById('dePerChannelWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  // Destroy old per-channel charts
+  ['R','G','B','W'].forEach(ch => {
+    destroyChart('de2_' + ch);
+    destroyChart('deITP_' + ch);
+  });
+
+  act.forEach(ch => {
+    const res = results[ch] || [];
+    const hasData = res.some(r => r);
+    if (!hasData) return;
+
+    const color = COLORS[ch];
+    const de2vals  = res.map(r => r ? parseFloat(r.de2.toFixed(3)) : null);
+    const deITPvals = res.map(r => r ? parseFloat(r.deITP.toFixed(3)) : null);
+    const valid = res.filter(r => r);
+    const avgDe2 = valid.length ? (valid.reduce((a,r) => a+r.de2, 0)/valid.length).toFixed(2) : '—';
+    const maxDe2 = valid.length ? Math.max(...valid.map(r=>r.de2)).toFixed(2) : '—';
+    const avgITP = valid.length ? (valid.reduce((a,r) => a+r.deITP, 0)/valid.length).toFixed(1) : '—';
+    const maxITP = valid.length ? Math.max(...valid.map(r=>r.deITP)).toFixed(1) : '—';
+    const good2 = parseFloat(maxDe2) < 3;
+    const goodITP = parseFloat(maxITP) < 10;
+
+    // Create block
+    const block = document.createElement('div');
+    block.className = 'de-ch-block';
+    block.innerHTML = `
+      <div class="de-ch-header">
+        <span class="de-ch-name" style="color:${color}">Kanał ${ch}</span>
+        <div class="de-ch-badges">
+          <span class="badge ${good2?'good':'warn'}">ΔE2000 maks: ${maxDe2} ${good2?'✓':'⚠'}</span>
+          <span class="badge ${goodITP?'good':'warn'}">ΔEITP maks: ${maxITP} ${goodITP?'✓':'⚠'}</span>
+          <span class="badge neutral">ΔE2000 śr: ${avgDe2}</span>
+          <span class="badge neutral">ΔEITP śr: ${avgITP}</span>
+        </div>
+      </div>
+      <div class="de-ch-charts">
+        <div class="chart-wrap" style="margin-bottom:0;flex:1">
+          <div class="chart-title">ΔE2000 — kanał ${ch}</div>
+          <div style="height:180px"><canvas id="de2_${ch}"></canvas></div>
+        </div>
+        <div class="chart-wrap" style="margin-bottom:0;flex:1">
+          <div class="chart-title">ΔE ITP — kanał ${ch}</div>
+          <div style="height:180px"><canvas id="deITP_${ch}"></canvas></div>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(block);
+
+    // Render charts
+    const makeDataset = (label, vals) => ({
+      label,
+      data: vals,
+      backgroundColor: color + 'bb',
+      borderColor: color,
+      borderWidth: 1,
+      borderRadius: 3
+    });
+
+    charts['de2_' + ch] = new Chart(document.getElementById('de2_' + ch), {
+      type: 'bar',
+      data: { labels: LEVELS, datasets: [makeDataset('ΔE2000 ' + ch, de2vals)] },
+      options: makeChartOptions('ΔE2000', 0)
+    });
+    charts['deITP_' + ch] = new Chart(document.getElementById('deITP_' + ch), {
+      type: 'bar',
+      data: { labels: LEVELS, datasets: [makeDataset('ΔE ITP ' + ch, deITPvals)] },
+      options: makeChartOptions('ΔE ITP', 0)
+    });
+  });
+}
+
+// ─── RGB Tracking ─────────────────────────────────────────────────────────────
+
+// Macierz XYZ→RGB (sRGB, D65) — wiersze to R, G, B
+// Źródło: IEC 61966-2-1 / sRGB standard
+const M_XYZ_TO_SRGB = [
+  [ 3.2406, -1.5372, -0.4986],
+  [-0.9689,  1.8758,  0.0415],
+  [ 0.0557, -0.2040,  1.0570]
+];
+
+function xyYtoRGBgain(x, y, Y) {
+  // 1. xyY → XYZ (Y znormalizowane do 1 dla porównania gainów)
+  if (!y || y === 0) return null;
+  const Yn = 1;
+  const X = (Yn / y) * x;
+  const Z = (Yn / y) * (1 - x - y);
+
+  // 2. XYZ → liniowe RGB przez macierz sRGB
+  const r = M_XYZ_TO_SRGB[0][0]*X + M_XYZ_TO_SRGB[0][1]*Yn + M_XYZ_TO_SRGB[0][2]*Z;
+  const g = M_XYZ_TO_SRGB[1][0]*X + M_XYZ_TO_SRGB[1][1]*Yn + M_XYZ_TO_SRGB[1][2]*Z;
+  const b = M_XYZ_TO_SRGB[2][0]*X + M_XYZ_TO_SRGB[2][1]*Yn + M_XYZ_TO_SRGB[2][2]*Z;
+
+  // 3. Dla D65 (x=0.3127, y=0.3290) gain każdego kanału = 1.0 (100%)
+  //    Liczymy gain D65 jako referencję
+  const xD = D65.x, yD = D65.y;
+  const XD = (1/yD)*xD, ZD = (1/yD)*(1-xD-yD);
+  const rD = M_XYZ_TO_SRGB[0][0]*XD + M_XYZ_TO_SRGB[0][1]*1 + M_XYZ_TO_SRGB[0][2]*ZD;
+  const gD = M_XYZ_TO_SRGB[1][0]*XD + M_XYZ_TO_SRGB[1][1]*1 + M_XYZ_TO_SRGB[1][2]*ZD;
+  const bD = M_XYZ_TO_SRGB[2][0]*XD + M_XYZ_TO_SRGB[2][1]*1 + M_XYZ_TO_SRGB[2][2]*ZD;
+
+  // 4. Gain jako % względem D65
+  return {
+    R: (r / rD) * 100,
+    G: (g / gD) * 100,
+    B: (b / bD) * 100
+  };
+}
+
+function renderRGBTracking() {
+  const validIndices = [0,1,2,3,4,5,6,7];
+  const labels = validIndices.map(i => LEVELS[i]);
+
+  // Oblicz gain dla każdego poziomu kanału W
+  const gains = validIndices.map(i => {
+    const d = data['W'][i];
+    if (d.x === '' || d.y === '' || d.Y === '') return null;
+    return xyYtoRGBgain(parseFloat(d.x), parseFloat(d.y), parseFloat(d.Y));
+  });
+
+  const rData = gains.map(g => g ? parseFloat(g.R.toFixed(2)) : null);
+  const gData = gains.map(g => g ? parseFloat(g.G.toFixed(2)) : null);
+  const bData = gains.map(g => g ? parseFloat(g.B.toFixed(2)) : null);
+
+  // Zakres osi Y: nieco poza zakres danych
+  const allVals = [...rData, ...gData, ...bData].filter(v => v !== null);
+  const minV = allVals.length ? Math.min(85, Math.floor(Math.min(...allVals) - 2)) : 85;
+  const maxV = allVals.length ? Math.max(110, Math.ceil(Math.max(...allVals) + 2)) : 110;
+
+  const trackOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        callbacks: {
+          label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) + '%' : '—'}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } },
+        title: { display: true, text: 'Poziom sygnału', color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+      },
+      y: {
+        min: minV,
+        max: maxV,
+        grid: { color: 'rgba(255,255,255,0.07)' },
+        ticks: {
+          color: '#555555',
+          font: { size: 11, family: "'Share Tech Mono', monospace" },
+          stepSize: 1,
+          callback: v => Number.isInteger(v) ? v + '%' : ''
+        },
+        title: { display: true, text: 'Gain [%]', color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+      }
+    },
+    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+  };
+
+  destroyChart('rgbTrack');
+  charts['rgbTrack'] = new Chart(document.getElementById('rgbTrackChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Red',
+          data: rData,
+          borderColor: '#ff3333',
+          backgroundColor: 'rgba(216,90,48,0.08)',
+          borderWidth: 2,
+          pointRadius: 5,
+          pointBackgroundColor: '#ff3333',
+          tension: 0.3,
+          fill: false
+        },
+        {
+          label: 'Green',
+          data: gData,
+          borderColor: '#33ff33',
+          backgroundColor: 'rgba(74,158,47,0.08)',
+          borderWidth: 2,
+          pointRadius: 5,
+          pointBackgroundColor: '#33ff33',
+          tension: 0.3,
+          fill: false
+        },
+        {
+          label: 'Blue',
+          data: bData,
+          borderColor: '#4488ff',
+          backgroundColor: 'rgba(61,127,214,0.08)',
+          borderWidth: 2,
+          pointRadius: 5,
+          pointBackgroundColor: '#4488ff',
+          tension: 0.3,
+          fill: false
+        },
+        {
+          label: 'Ideał 100%',
+          data: validIndices.map(() => 100),
+          borderColor: 'rgba(255,255,255,0.22)',
+          borderWidth: 1,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false
+        }
+      ]
+    },
+    options: trackOptions
+  });
+
+  // ── Karty podsumowania ────────────────────────────────────────────────────
+
+  const cards = document.getElementById('rgbTrackCards');
+  cards.innerHTML = '';
+
+  const validGains = gains.filter(g => g !== null);
+  if (!validGains.length) {
+    cards.innerHTML = '<div class="empty-state">Brak danych kanału W — wprowadź pomiary na zakładce Dane wejściowe.</div>';
+    return;
+  }
+
+  const avgR = validGains.reduce((s, g) => s + g.R, 0) / validGains.length;
+  const avgG = validGains.reduce((s, g) => s + g.G, 0) / validGains.length;
+  const avgB = validGains.reduce((s, g) => s + g.B, 0) / validGains.length;
+
+  const maxDevR = Math.max(...validGains.map(g => Math.abs(g.R - 100)));
+  const maxDevG = Math.max(...validGains.map(g => Math.abs(g.G - 100)));
+  const maxDevB = Math.max(...validGains.map(g => Math.abs(g.B - 100)));
+
+  function gainCard(ch, avg, maxDev, color) {
+    const good = maxDev < 5;
+    const c = document.createElement('div');
+    c.className = 'metric';
+    c.innerHTML = `
+      <div class="metric-label" style="color:${color}">${ch} gain</div>
+      <div class="metric-value">${avg.toFixed(1)}<span style="font-size:14px;font-weight:400">%</span></div>
+      <div class="metric-sub">średnia · odchylenie od 100%</div>
+      <div class="metric-sub" style="margin-top:4px">max dryft: ${maxDev.toFixed(1)}%</div>
+      <div style="margin-top:8px"><span class="badge ${good ? 'good' : 'warn'}">${good ? '✓ < 5%' : '⚠ > 5%'}</span></div>
+    `;
+    return c;
+  }
+
+  cards.appendChild(gainCard('Red',   avgR, maxDevR, '#ff3333'));
+  cards.appendChild(gainCard('Green', avgG, maxDevG, '#33ff33'));
+  cards.appendChild(gainCard('Blue',  avgB, maxDevB, '#4488ff'));
+
+  // Ogólna ocena
+  const maxOverall = Math.max(maxDevR, maxDevG, maxDevB);
+  const isGood = maxOverall < 5;
+  const summary = document.createElement('div');
+  summary.className = 'metric';
+  summary.innerHTML = `
+    <div class="metric-label">Ocena RGB Tracking</div>
+    <div style="margin-top:10px">
+      <span class="badge ${isGood ? 'good' : 'warn'}" style="font-size:13px;padding:5px 12px">
+        ${isGood ? '✓ Dobry tracking' : '⚠ Wymaga kalibracji'}
+      </span>
+    </div>
+    <div class="metric-sub" style="margin-top:10px">
+      Maks. odchylenie kanału: <strong style="color:var(--text)">${maxOverall.toFixed(1)}%</strong><br>
+      ${isGood
+        ? 'Wszystkie kanały mieszczą się w ±5% od ideału.'
+        : 'Przynajmniej jeden kanał odchyla się o ponad 5% od wartości wzorcowej D65.'}
+    </div>
+    <div class="metric-sub" style="margin-top:6px">Referencje: &lt;2% → referencja · &lt;5% → dobrze · &gt;5% → widoczne odchylenia</div>
+  `;
+  cards.appendChild(summary);
+}
+
+// ─── Grayscale Tracking ───────────────────────────────────────────────────────
+
+function renderGrayscale() {
+  const wRes = getChannelResults('W');
+
+  // Levels 1–7 (indices 1–7, skip index 0 = level 0)
+  const validIndices = [1,2,3,4,5,6,7];
+  const labels = validIndices.map(i => LEVELS[i]);
+
+  // ── Chart 1: Δx and Δy tracking ──────────────────────────────────────────
+
+  const dxData = validIndices.map(i => wRes[i] ? parseFloat(wRes[i].dx.toFixed(5)) : null);
+  const dyData = validIndices.map(i => wRes[i] ? parseFloat(wRes[i].dy.toFixed(5)) : null);
+
+  const trackOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+      },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } },
+        title: { display: true, text: 'Δ chromatyczność', color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+      }
+    },
+    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+  };
+
+  destroyChart('gsTrack');
+  charts['gsTrack'] = new Chart(document.getElementById('gsTrackChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Δx od D65',
+          data: dxData,
+          borderColor: '#8b15ba',
+          backgroundColor: 'rgba(79,142,247,0.08)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#8b15ba',
+          tension: 0.3,
+          fill: false
+        },
+        {
+          label: 'Δy od D65',
+          data: dyData,
+          borderColor: '#36b37e',
+          backgroundColor: 'rgba(54,179,126,0.08)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#36b37e',
+          tension: 0.3,
+          fill: false
+        },
+        {
+          label: 'y=0 (D65)',
+          data: validIndices.map(() => 0),
+          borderColor: 'rgba(255,255,255,0.18)',
+          borderWidth: 1,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false
+        }
+      ]
+    },
+    options: trackOptions
+  });
+
+  // ── Chart 2: WB ΔE2000 bars ───────────────────────────────────────────────
+
+  const deData = validIndices.map(i => wRes[i] ? parseFloat(wRes[i].de2.toFixed(3)) : null);
+
+  const deOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { mode: 'index', intersect: false },
+      annotation: {
+        annotations: {
+          refLine: {
+            type: 'line',
+            yMin: 3, yMax: 3,
+            borderColor: 'rgba(240,160,80,0.7)',
+            borderWidth: 1.5,
+            borderDash: [5, 4],
+            label: { display: true, content: 'ΔE=3', color: '#f0a050', font: { size: 10, family: "'Share Tech Mono', monospace" }, position: 'end' }
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+      },
+      y: {
+        min: 0,
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } },
+        title: { display: true, text: 'ΔE2000', color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+      }
+    },
+    interaction: { mode: 'nearest', axis: 'x', intersect: false }
+  };
+
+  destroyChart('gsDe');
+  charts['gsDe'] = new Chart(document.getElementById('gsDeChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'WB ΔE2000',
+        data: deData,
+        backgroundColor: '#aaaaaacc',
+        borderColor: '#aaaaaa',
+        borderWidth: 1,
+        borderRadius: 3
+      }]
+    },
+    options: deOptions
+  });
+
+  // ── Summary cards ─────────────────────────────────────────────────────────
+
+  const gsCards = document.getElementById('gsCards');
+  gsCards.innerHTML = '';
+
+  const validResults = validIndices.map(i => wRes[i]).filter(r => r);
+
+  if (!validResults.length) {
+    gsCards.innerHTML = '<div class="empty-state">Brak danych kanału W — wprowadź pomiary na zakładce Dane wejściowe.</div>';
+    return;
+  }
+
+  const avgDx = validResults.reduce((s, r) => s + r.dx, 0) / validResults.length;
+  const avgDy = validResults.reduce((s, r) => s + r.dy, 0) / validResults.length;
+  const maxDxy = Math.max(...validResults.map(r => Math.sqrt(r.dx*r.dx + r.dy*r.dy)));
+  const avgDe2 = validResults.reduce((s, r) => s + r.de2, 0) / validResults.length;
+  const isStable = maxDxy < 0.005 && avgDe2 < 3;
+
+  function makeCard(label, value, sub, extra) {
+    const c = document.createElement('div');
+    c.className = 'metric';
+    c.innerHTML = `<div class="metric-label">${label}</div><div class="metric-value">${value}</div><div class="metric-sub">${sub}</div>${extra || ''}`;
+    return c;
+  }
+
+  gsCards.appendChild(makeCard(
+    'Średnie Δx od D65',
+    avgDx.toFixed(5),
+    `x_D65 = 0.3127`,
+    `<div class="metric-sub" style="margin-top:4px">cel: |Δx| &lt; 0.003</div>`
+  ));
+
+  gsCards.appendChild(makeCard(
+    'Średnie Δy od D65',
+    avgDy.toFixed(5),
+    `y_D65 = 0.3290`,
+    `<div class="metric-sub" style="margin-top:4px">cel: |Δy| &lt; 0.003</div>`
+  ));
+
+  gsCards.appendChild(makeCard(
+    'Max dryft punktu bieli',
+    maxDxy.toFixed(5),
+    'max Δxy = √(Δx² + Δy²)',
+    `<div style="margin-top:8px"><span class="badge ${maxDxy < 0.005 ? 'good' : 'warn'}">${maxDxy < 0.005 ? '✓ < 0.005' : '⚠ > 0.005'}</span></div>`
+  ));
+
+  gsCards.appendChild(makeCard(
+    'Średnie WB ΔE2000',
+    avgDe2.toFixed(2),
+    'względem punktu 100% kanału W',
+    `<div style="margin-top:8px"><span class="badge ${avgDe2 < 3 ? 'good' : 'warn'}">${avgDe2 < 3 ? '✓ < 3.0' : '⚠ > 3.0'}</span></div>`
+  ));
+
+  const statusCard = document.createElement('div');
+  statusCard.className = 'metric';
+  statusCard.innerHTML = `
+    <div class="metric-label">Ocena stabilności</div>
+    <div style="margin-top:10px">
+      <span class="badge ${isStable ? 'good' : 'warn'}" style="font-size:13px;padding:5px 12px">
+        ${isStable ? '✓ Stabilny' : '⚠ Wymaga kalibracji'}
+      </span>
+    </div>
+    <div class="metric-sub" style="margin-top:10px">
+      ${isStable
+        ? 'Punkt bieli jest stabilny w całym zakresie jasności.'
+        : 'Dryft punktu bieli przekracza progi jakościowe.<br>Zalecana kalibracja białego balansu.'}
+    </div>
+  `;
+  gsCards.appendChild(statusCard);
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+function calculate() {
+  const has = CHANNELS.some(ch => data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== ''));
+  if (!has) { alert('Wprowadź dane pomiarowe lub wczytaj demo.'); return; }
+  switchMain('chroma');
+}
+
+function clearChannel(ch) {
+  if (!confirm(`Wyczyścić dane kanału ${ch}?`)) return;
+  data[ch] = LEVELS.map(() => ({x:'',y:'',Y:''}));
+  saveToStorage();
+  renderInputs();
+}
+
+function clearAll() {
+  if (!confirm('Wyczyścić dane wszystkich kanałów (R, G, B, W)?')) return;
+  CHANNELS.forEach(ch => { data[ch] = LEVELS.map(() => ({x:'',y:'',Y:''})); });
+  saveToStorage();
+  renderInputs();
+}
+
+function loadDemo() {
+  // Demo with clearly different chromaticities to demonstrate proper chart rendering
+  const demo = {
+    R: [
+      [0.580, 0.340, 0.02], // R channel - clearly warm/red
+      [0.572, 0.338, 1.2],
+      [0.568, 0.336, 4.8],
+      [0.562, 0.334, 10.5],
+      [0.558, 0.333, 18.2],
+      [0.555, 0.332, 28.4],
+      [0.550, 0.331, 62.0],
+      [0.545, 0.330, 110.0]
+    ],
+    G: [
+      [0.280, 0.590, 0.02], // G channel - clearly green
+      [0.282, 0.588, 1.8],
+      [0.284, 0.585, 7.2],
+      [0.285, 0.583, 15.8],
+      [0.286, 0.581, 27.5],
+      [0.287, 0.580, 43.0],
+      [0.288, 0.578, 96.0],
+      [0.290, 0.576, 172.0]
+    ],
+    B: [
+      [0.148, 0.065, 0.01], // B channel - clearly blue
+      [0.150, 0.068, 0.6],
+      [0.152, 0.070, 2.5],
+      [0.154, 0.072, 5.5],
+      [0.155, 0.073, 9.8],
+      [0.156, 0.074, 15.3],
+      [0.158, 0.076, 34.0],
+      [0.160, 0.078, 61.0]
+    ],
+    W: [
+      [0.3130, 0.3292, 0.05],
+      [0.3128, 0.3291, 4.5],
+      [0.3126, 0.3290, 18.0],
+      [0.3125, 0.3289, 40.0],
+      [0.3127, 0.3290, 71.0],
+      [0.3128, 0.3291, 111.0],
+      [0.3130, 0.3292, 250.0],
+      [0.3133, 0.3294, 450.0]
+    ]
+  };
+
+  CHANNELS.forEach(ch => {
+    if (demo[ch]) {
+      demo[ch].forEach((v, i) => {
+        data[ch][i] = { x: v[0].toString(), y: v[1].toString(), Y: v[2].toString() };
+      });
+    }
+  });
+  saveToStorage();
+  renderInputs();
+}
+
+function renderExport() {
+  // ── 1. White balance channels ──
+  const lines = [];
+  CHANNELS.forEach(ch => {
+    const hasData = data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== '');
+    if (!hasData) return;
+    lines.push(`# Kanał ${ch}`);
+    LEVELS.forEach((lv, i) => {
+      const d = data[ch][i];
+      if (d.x !== '' && d.y !== '' && d.Y !== '') {
+        lines.push(`${d.x}\t${d.y}\t${d.Y}`);
+      } else {
+        lines.push('');
+      }
+    });
+    lines.push('');
+  });
+  const exportArea = document.getElementById('exportArea');
+  exportArea.value = lines.join('\n').trimEnd() || '# Brak danych wejściowych';
+
+  // ── 2. APL ──
+  const aplLines = ['# APL Brightness — luminancja [cd/m²]', '# Format: jedna wartość Y na wiersz (APL 2%→100%)'];
+  let aplHasAny = false;
+  APL_LEVELS.forEach(level => {
+    const inp = document.getElementById('aplInput_' + level);
+    const val = inp ? inp.value.trim() : '';
+    if (val !== '') aplHasAny = true;
+    aplLines.push(val !== '' ? val : '');
+  });
+  document.getElementById('exportAPL').value = aplHasAny
+    ? aplLines.join('\n').trimEnd()
+    : '# Brak danych APL';
+
+  // ── 3. Colour Checker ──
+  const ccLines = ['# Colour Checker — CIE 1931 xy', '# Format: x  y  (24 wiersze, pola 1–24)'];
+  let ccHasAny = false;
+  CC_PATCHES.forEach((p, i) => {
+    const d = ccData[i];
+    if (d.x !== '' && d.y !== '') {
+      ccLines.push(`${d.x}\t${d.y}\t# ${i+1}. ${p.name}`);
+      ccHasAny = true;
+    } else {
+      ccLines.push(`\t\t# ${i+1}. ${p.name}`);
+    }
+  });
+  document.getElementById('exportCC').value = ccHasAny
+    ? ccLines.join('\n').trimEnd()
+    : '# Brak danych Colour Checker';
+}
+
+function getChannelPasteText(ch) {
+  const hasData = data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== '');
+  if (!hasData) return '';
+  return LEVELS.map((lv, i) => {
+    const d = data[ch][i];
+    if (d.x !== '' && d.y !== '' && d.Y !== '') return `${d.x}\t${d.y}\t${d.Y}`;
+    return '';
+  }).join('\n');
+}
+
+function copyChannel(ch) {
+  const text = getChannelPasteText(ch);
+  if (!text) { alert(`Brak danych dla kanału ${ch}.`); return; }
+  navigator.clipboard.writeText(text).then(() => {
+    // feedback on button
+    const btns = document.querySelectorAll('#view-export button');
+    btns.forEach(b => { if (b.textContent === `Kopiuj ${ch}`) {
+      const orig = b.textContent;
+      b.textContent = `✓ Skopiowano ${ch}`;
+      b.style.color = '#36b37e';
+      setTimeout(() => { b.textContent = orig; b.style.color = ''; }, 2000);
+    }});
+  });
+}
+
+function copyExport() {
+  const ta = document.getElementById('exportArea');
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = document.querySelector('#view-export .btn-row button');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Skopiowano';
+    btn.style.color = '#36b37e';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+  });
+}
+
+function copyExportAPL() {
+  const ta = document.getElementById('exportAPL');
+  // Export only data lines (no comments) for clean paste
+  const clean = ta.value.split('\n')
+    .filter(l => !l.startsWith('#'))
+    .join('\n').trim();
+  navigator.clipboard.writeText(clean).then(() => {
+    const btns = document.querySelectorAll('#view-export button');
+    btns.forEach(b => {
+      if (b.textContent.includes('Kopiuj APL')) {
+        const orig = b.textContent;
+        b.textContent = '✓ Skopiowano APL';
+        b.style.color = '#36b37e';
+        setTimeout(() => { b.textContent = orig; b.style.color = ''; }, 2000);
+      }
+    });
+  });
+}
+
+function copyExportCC() {
+  const ta = document.getElementById('exportCC');
+  // Export only x\ty columns (strip inline comments) for clean paste
+  const clean = ta.value.split('\n')
+    .filter(l => !l.startsWith('#') && l.trim() !== '')
+    .map(l => {
+      // Remove inline comment (# ...) and trailing whitespace
+      const parts = l.split('#')[0].trim().split(/\s+/);
+      return parts.slice(0, 2).join('\t');
+    })
+    .filter(l => l.trim() !== '')
+    .join('\n').trim();
+  navigator.clipboard.writeText(clean).then(() => {
+    const btns = document.querySelectorAll('#view-export button');
+    btns.forEach(b => {
+      if (b.textContent.includes('Kopiuj Colour Checker')) {
+        const orig = b.textContent;
+        b.textContent = '✓ Skopiowano CC';
+        b.style.color = '#36b37e';
+        setTimeout(() => { b.textContent = orig; b.style.color = ''; }, 2000);
+      }
+    });
+  });
+}
+
+function downloadCSV() {
+  const lines = ['Kanał,Poziom,x,y,Y [cd/m2],Δx od D65,Δy od D65,Y_rel [%],ΔE2000,ΔE ITP'];
+  CHANNELS.forEach(ch => {
+    if (!data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== '')) return;
+    const res = getChannelResults(ch);
+    LEVELS.forEach((lv, i) => {
+      if (data[ch][i].x === '') return;
+      const r = res[i];
+      lines.push([ch, lv, data[ch][i].x, data[ch][i].y, data[ch][i].Y,
+        r ? r.dx.toFixed(5) : '', r ? r.dy.toFixed(5) : '',
+        r && r.relY !== null ? r.relY.toFixed(2) : '',
+        r ? r.de2.toFixed(3) : '', r ? r.deITP.toFixed(3) : ''].join(','));
+    });
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'white_balance_analysis.csv';
+  a.click();
+}
+
+
+// ─── APL Brightness ──────────────────────────────────────────────────────────
+
+const APL_LEVELS = [2, 5, 10, 15, 20, 25, 50, 75, 100];
+let aplChartInstance = null;
+let aplGridInited = false;
+
+function initAPLGrid() {
+  if (aplGridInited) return;
+  const grid = document.getElementById('aplGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  APL_LEVELS.forEach(level => {
+    const cell = document.createElement('div');
+    cell.className = 'apl-cell';
+    cell.id = 'aplCell_' + level;
+    cell.innerHTML = `
+      <div class="apl-cell-label">APL ${level}%</div>
+      <input type="number" min="0" step="0.1" id="aplInput_${level}"
+        placeholder="cd/m²"
+        oninput="document.getElementById('aplCell_${level}').classList.toggle('has-data', this.value !== '')" />
+    `;
+    grid.appendChild(cell);
+  });
+  aplGridInited = true;
+}
+
+function aplParsePaste() {
+  initAPLGrid();
+  const raw = document.getElementById('aplPasteInput').value.trim();
+  if (!raw) { alert('Pole wklejania jest puste.'); return; }
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const values = [];
+  for (const line of lines) {
+    const parts = line.split(/[\t,;]+|\s{2,}|\s+/).map(p => p.trim()).filter(p => p !== '');
+    // If 1 column — it's luminance directly
+    // If 2 columns — treat as just two numbers, take last (y without x context — but user said ignore x,y → take col3 if 3, else col1)
+    // If ≥3 columns — take 3rd column (Y / luminance)
+    let val;
+    if (parts.length >= 3) {
+      val = parseFloat(parts[2]); // Y column
+    } else if (parts.length === 1) {
+      val = parseFloat(parts[0]);
+    } else {
+      // 2 columns — ambiguous; treat as luminance in last column
+      val = parseFloat(parts[parts.length - 1]);
+    }
+    if (!isNaN(val)) values.push(val);
+  }
+
+  if (values.length === 0) { alert('Nie znaleziono danych liczbowych.'); return; }
+  if (values.length > 9) { alert(`Znaleziono ${values.length} wierszy, zostanie użytych pierwszych 9.`); }
+
+  APL_LEVELS.forEach((level, i) => {
+    const inp = document.getElementById('aplInput_' + level);
+    const cell = document.getElementById('aplCell_' + level);
+    if (values[i] !== undefined) {
+      if (inp) inp.value = values[i];
+      if (cell) cell.classList.add('has-data');
+    }
+  });
+
+  document.getElementById('aplPasteInput').value = '';
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = `✓ Zaimportowano ${Math.min(values.length, 9)} wartości`;
+  btn.style.color = '#36b37e';
+  setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+}
+
+function aplLoadDemo() {
+  initAPLGrid();
+  const demo = [1060, 1060, 1058, 965, 762, 620, 556, 495, 340];
+  APL_LEVELS.forEach((level, i) => {
+    const inp = document.getElementById('aplInput_' + level);
+    if (inp) {
+      inp.value = demo[i];
+      document.getElementById('aplCell_' + level).classList.add('has-data');
+    }
+  });
+  document.getElementById('aplDeviceName').value = 'Samsung OLED S95F (TANDEM OLED)';
+}
+
+function aplClear() {
+  APL_LEVELS.forEach(level => {
+    const inp = document.getElementById('aplInput_' + level);
+    if (inp) { inp.value = ''; }
+    const cell = document.getElementById('aplCell_' + level);
+    if (cell) cell.classList.remove('has-data');
+  });
+  document.getElementById('aplDeviceName').value = '';
+  document.getElementById('aplChartArea').style.display = 'none';
+  if (aplChartInstance) { aplChartInstance.destroy(); aplChartInstance = null; }
+}
+
+function renderAPLChart() {
+  initAPLGrid();
+  const name = document.getElementById('aplDeviceName').value.trim() || 'Urządzenie';
+  const values = APL_LEVELS.map(level => {
+    const v = parseFloat(document.getElementById('aplInput_' + level).value);
+    return isNaN(v) ? null : v;
+  });
+
+  const hasAny = values.some(v => v !== null);
+  if (!hasAny) {
+    alert('Wpisz co najmniej jedną wartość luminancji.');
+    return;
+  }
+
+  document.getElementById('aplChartArea').style.display = '';
+
+  // peak = max value for label
+  const maxVal = Math.max(...values.filter(v => v !== null));
+
+  // Label top-right
+  const lbl = document.getElementById('aplChartLabel');
+  lbl.textContent = name + ': ' + maxVal.toFixed(0) + ' cd/m²';
+
+  // Metrics
+  const validVals = values.filter(v => v !== null);
+  const minVal = Math.min(...validVals);
+  const val2 = values[0];  // APL 2%
+  const val100 = values[values.length - 1]; // APL 100%
+  const ratio = (val2 && val100) ? (val2 / val100).toFixed(2) : '—';
+
+  const metricsEl = document.getElementById('aplMetrics');
+  metricsEl.innerHTML = `
+    <div class="metric"><div class="metric-label">Szczyt (max APL)</div><div class="metric-value">${maxVal.toFixed(0)}</div><div class="metric-sub">cd/m²</div></div>
+    <div class="metric"><div class="metric-label">APL 2%</div><div class="metric-value">${val2 !== null ? val2.toFixed(0) : '—'}</div><div class="metric-sub">cd/m²</div></div>
+    <div class="metric"><div class="metric-label">APL 100%</div><div class="metric-value">${val100 !== null ? val100.toFixed(0) : '—'}</div><div class="metric-sub">cd/m²</div></div>
+    <div class="metric"><div class="metric-label">Stosunek 2%/100%</div><div class="metric-value">${ratio}</div><div class="metric-sub">× (dimming ratio)</div></div>
+    <div class="metric"><div class="metric-label">Min luminancja</div><div class="metric-value">${minVal.toFixed(0)}</div><div class="metric-sub">cd/m²</div></div>
+  `;
+
+  // Chart
+  if (aplChartInstance) { aplChartInstance.destroy(); aplChartInstance = null; }
+
+  const ctx = document.getElementById('aplChart').getContext('2d');
+
+  aplChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: APL_LEVELS.map(l => l + '%'),
+      datasets: [{
+        label: name,
+        data: values,
+        borderColor: '#f0a050',
+        backgroundColor: 'rgba(240,160,80,0.12)',
+        pointBackgroundColor: '#f0a050',
+        pointBorderColor: '#f0a050',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2,
+        tension: 0.3,
+        spanGaps: true,
+        fill: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e2230',
+          borderColor: '#333a4d',
+          borderWidth: 1,
+          titleColor: '#e8eaf0',
+          bodyColor: '#8b90a0',
+          titleFont: { family: 'Share Tech Mono', size: 12 },
+          bodyFont: { family: 'Share Tech Mono', size: 11 },
+          callbacks: {
+            label: ctx => ' ' + (ctx.raw !== null ? ctx.raw.toFixed(1) : '—') + ' cd/m²'
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Wypełnienie ekranu bielą (APL)',
+            color: '#555555',
+            font: { family: 'Share Tech Mono', size: 11 }
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: '#555555', font: { family: 'Share Tech Mono', size: 11 } }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Luminancja (jasność)',
+            color: '#555555',
+            font: { family: 'Share Tech Mono', size: 11 }
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: {
+            color: '#555555',
+            font: { family: 'Share Tech Mono', size: 11 },
+            callback: v => v.toLocaleString()
+          },
+          beginAtZero: false,
+        }
+      }
+    }
+  });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.ch-tab').forEach(t => {
+  t.dataset.ch = t.textContent.trim()[0];
+});
+
+// Show saved badge if data was restored
+const hadSaved = localStorage.getItem(STORAGE_KEY);
+if (hadSaved) {
+  const badge = document.getElementById('storageBadge');
+  if (badge) badge.style.display = 'flex';
+}
+
+// Init reset button label
+switchCh('R');
+renderInputs();
+
+// ─── Colour Checker ───────────────────────────────────────────────────────────
+
+// 24 patches Macbeth ColorChecker — reference xy chromaticity (D50 illuminant)
+// Source: X-Rite official spectral data, adapted to CIE xy
+const CC_PATCHES = [
+  { name: 'Dark Skin',        ref: { x: 0.4002, y: 0.3504 }, color: '#735244' },
+  { name: 'Light Skin',       ref: { x: 0.3773, y: 0.3446 }, color: '#c29682' },
+  { name: 'Blue Sky',         ref: { x: 0.2470, y: 0.2514 }, color: '#627a9d' },
+  { name: 'Foliage',          ref: { x: 0.3372, y: 0.4220 }, color: '#576c43' },
+  { name: 'Blue Flower',      ref: { x: 0.2651, y: 0.2400 }, color: '#8580b1' },
+  { name: 'Bluish Green',     ref: { x: 0.2608, y: 0.3430 }, color: '#67bdaa' },
+  { name: 'Orange',           ref: { x: 0.5060, y: 0.4070 }, color: '#d67e2c' },
+  { name: 'Purplish Blue',    ref: { x: 0.2060, y: 0.1750 }, color: '#505ba4' },
+  { name: 'Moderate Red',     ref: { x: 0.4533, y: 0.3058 }, color: '#c15a63' },
+  { name: 'Purple',           ref: { x: 0.2985, y: 0.2079 }, color: '#5e3c6c' },
+  { name: 'Yellow Green',     ref: { x: 0.3908, y: 0.4762 }, color: '#9dbc40' },
+  { name: 'Orange Yellow',    ref: { x: 0.4727, y: 0.4376 }, color: '#e0a32e' },
+  { name: 'Blue',             ref: { x: 0.1866, y: 0.1579 }, color: '#383d96' },
+  { name: 'Green',            ref: { x: 0.3083, y: 0.4815 }, color: '#469449' },
+  { name: 'Red',              ref: { x: 0.5358, y: 0.3090 }, color: '#af363c' },
+  { name: 'Yellow',           ref: { x: 0.4459, y: 0.4712 }, color: '#e7c71f' },
+  { name: 'Magenta',          ref: { x: 0.3655, y: 0.2337 }, color: '#bb5695' },
+  { name: 'Cyan',             ref: { x: 0.1979, y: 0.2710 }, color: '#0885a1' },
+  { name: 'White 9.5',        ref: { x: 0.3101, y: 0.3163 }, color: '#f3f3f2' },
+  { name: 'Neutral 8',        ref: { x: 0.3101, y: 0.3163 }, color: '#c8c8c8' },
+  { name: 'Neutral 6.5',      ref: { x: 0.3101, y: 0.3163 }, color: '#a0a0a0' },
+  { name: 'Neutral 5',        ref: { x: 0.3101, y: 0.3163 }, color: '#7a7a7a' },
+  { name: 'Neutral 3.5',      ref: { x: 0.3101, y: 0.3163 }, color: '#555555' },
+  { name: 'Black 2',          ref: { x: 0.3101, y: 0.3163 }, color: '#343434' },
+];
+
+let ccData = CC_PATCHES.map(p => ({ x: p.ref.x.toString(), y: p.ref.y.toString() }));
+let ccInited = false;
+let ccCieImageCache = null;
+
+function initColorChecker() {
+  if (ccInited) return;
+  const grid = document.getElementById('ccGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  CC_PATCHES.forEach((p, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cc-patch' + (ccData[i].x !== '' ? ' has-data' : '');
+    cell.id = 'ccPatch_' + i;
+    cell.innerHTML = `
+      <div class="cc-patch-swatch" id="ccSwatch_${i}" style="background:${p.color}"></div>
+      <div class="cc-patch-name">${i+1}. ${p.name}</div>
+      <div class="inp-group"><span class="inp-label">x</span><input type="number" step="0.0001" min="0" max="1" id="ccX_${i}" value="${ccData[i].x}" placeholder="${p.ref.x.toFixed(4)}" oninput="ccSave(${i},'x',this.value)"></div>
+      <div class="inp-group"><span class="inp-label">y</span><input type="number" step="0.0001" min="0" max="1" id="ccY_${i}" value="${ccData[i].y}" placeholder="${p.ref.y.toFixed(4)}" oninput="ccSave(${i},'y',this.value)"></div>
+    `;
+    grid.appendChild(cell);
+  });
+  ccInited = true;
+}
+
+function ccSave(i, field, val) {
+  ccData[i][field] = val;
+  document.getElementById('ccPatch_' + i).classList.toggle('has-data',
+    ccData[i].x !== '' || ccData[i].y !== '');
+}
+
+function ccParsePaste() {
+  initColorChecker();
+  const raw = document.getElementById('ccPasteInput').value.trim();
+  if (!raw) { alert('Pole wklejania jest puste.'); return; }
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const rows = [];
+  for (const line of lines) {
+    const parts = line.split(/[\t,;]+|\s{2,}|\s+/).map(p => p.trim()).filter(p => p !== '');
+    if (parts.length < 2) continue;
+    const x = parseFloat(parts[0]);
+    const y = parseFloat(parts[1]);
+    // Y (3rd column) is intentionally ignored
+    if (!isNaN(x) && !isNaN(y)) rows.push({ x, y });
+  }
+
+  if (rows.length === 0) { alert('Nie znaleziono danych. Wymagany format: x  y (lub x  y  Y — kolumna Y jest ignorowana).'); return; }
+  if (rows.length > 24) { alert(`Znaleziono ${rows.length} wierszy, zostanie użytych pierwszych 24.`); }
+
+  for (let i = 0; i < 24; i++) {
+    if (rows[i]) {
+      ccData[i] = { x: rows[i].x.toString(), y: rows[i].y.toString() };
+      const xi = document.getElementById('ccX_' + i);
+      const yi = document.getElementById('ccY_' + i);
+      if (xi) xi.value = rows[i].x.toString();
+      if (yi) yi.value = rows[i].y.toString();
+      const cell = document.getElementById('ccPatch_' + i);
+      if (cell) cell.classList.add('has-data');
+    }
+  }
+
+  document.getElementById('ccPasteInput').value = '';
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = `✓ Zaimportowano ${Math.min(rows.length, 24)} pól`;
+  btn.style.color = '#36b37e';
+  setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+
+  renderCCDiagram();
+}
+
+function ccLoadRef() {
+  CC_PATCHES.forEach((p, i) => {
+    ccData[i] = { x: p.ref.x.toString(), y: p.ref.y.toString() };
+    const xi = document.getElementById('ccX_' + i);
+    const yi = document.getElementById('ccY_' + i);
+    if (xi) { xi.value = p.ref.x.toString(); }
+    if (yi) { yi.value = p.ref.y.toString(); }
+    const cell = document.getElementById('ccPatch_' + i);
+    if (cell) cell.classList.add('has-data');
+  });
+  renderCCDiagram();
+}
+
+function ccClear() {
+  if (!confirm('Wyczyścić wszystkie dane Color Checkera?')) return;
+  CC_PATCHES.forEach((p, i) => {
+    ccData[i] = { x: '', y: '' };
+    const xi = document.getElementById('ccX_' + i);
+    const yi = document.getElementById('ccY_' + i);
+    if (xi) xi.value = '';
+    if (yi) yi.value = '';
+    const cell = document.getElementById('ccPatch_' + i);
+    if (cell) cell.classList.remove('has-data');
+  });
+  renderCCDiagram();
+}
+
+// ── CIE 1931 background generation ───────────────────────────────────────────
+
+// Minimal set of CIE 1931 standard observer data (every 5nm, 380–700nm)
+const CIE_OBSERVER = [
+  [380,0.001368,0.000039,0.006450],[385,0.002236,0.000064,0.010550],
+  [390,0.004243,0.000120,0.020050],[395,0.007650,0.000217,0.036210],
+  [400,0.014310,0.000396,0.067850],[405,0.023190,0.000640,0.110200],
+  [410,0.043510,0.001210,0.207400],[415,0.077630,0.002180,0.371300],
+  [420,0.134380,0.004000,0.645600],[425,0.214770,0.007300,1.039050],
+  [430,0.283900,0.011600,1.385600],[435,0.328500,0.016840,1.622960],
+  [440,0.348280,0.023000,1.747060],[445,0.348060,0.029800,1.782600],
+  [450,0.336200,0.038000,1.772110],[455,0.318700,0.048000,1.744100],
+  [460,0.290800,0.060000,1.669200],[465,0.251100,0.073900,1.528100],
+  [470,0.195360,0.090980,1.287640],[475,0.142100,0.112600,1.041900],
+  [480,0.095640,0.139020,0.812950],[485,0.057950,0.169300,0.616200],
+  [490,0.032010,0.208020,0.465180],[495,0.014700,0.258600,0.353300],
+  [500,0.004900,0.323000,0.272000],[505,0.002400,0.407300,0.212300],
+  [510,0.009300,0.503000,0.158200],[515,0.029100,0.608200,0.111700],
+  [520,0.063270,0.710000,0.078250],[525,0.109600,0.793200,0.057250],
+  [530,0.165500,0.862000,0.042160],[535,0.225750,0.914850,0.029840],
+  [540,0.290400,0.954000,0.020300],[545,0.359700,0.980300,0.013400],
+  [550,0.433450,0.994950,0.008750],[555,0.512050,1.000000,0.005750],
+  [560,0.594500,0.995000,0.003900],[565,0.678400,0.978600,0.002750],
+  [570,0.762100,0.952000,0.002100],[575,0.842500,0.915400,0.001800],
+  [580,0.916300,0.870000,0.001650],[585,0.978600,0.816300,0.001400],
+  [590,1.026300,0.757000,0.001100],[595,1.056700,0.694900,0.001000],
+  [600,1.062200,0.631000,0.000800],[605,1.045600,0.566800,0.000600],
+  [610,1.002600,0.503000,0.000340],[615,0.938400,0.441200,0.000240],
+  [620,0.854450,0.381000,0.000190],[625,0.751400,0.321000,0.000100],
+  [630,0.642400,0.265000,0.000050],[635,0.541900,0.217000,0.000030],
+  [640,0.447900,0.175000,0.000020],[645,0.360800,0.138200,0.000010],
+  [650,0.283500,0.107000,0.000000],[655,0.218700,0.081600,0.000000],
+  [660,0.164900,0.061000,0.000000],[665,0.121200,0.044580,0.000000],
+  [670,0.087400,0.032000,0.000000],[675,0.063600,0.023200,0.000000],
+  [680,0.046770,0.017000,0.000000],[685,0.032900,0.011920,0.000000],
+  [690,0.022700,0.008210,0.000000],[695,0.015840,0.005723,0.000000],
+  [700,0.011359,0.004102,0.000000]
+];
+
+// Spectral locus xy points
+const SPECTRAL_LOCUS = CIE_OBSERVER.map(([wl, X, Y, Z]) => {
+  const s = X + Y + Z;
+  return s > 0 ? { x: X/s, y: Y/s, wl } : null;
+}).filter(Boolean);
+
+// Convert xy to approximate sRGB for CIE diagram coloring
+function xyToSRGB(cx, cy) {
+  const Y = 1;
+  if (cy < 0.001) return [0, 0, 0];
+  const X = (Y / cy) * cx;
+  const Z = (Y / cy) * (1 - cx - cy);
+  // XYZ to linear sRGB
+  let r =  3.2406*X - 1.5372*Y - 0.4986*Z;
+  let g = -0.9689*X + 1.8758*Y + 0.0415*Z;
+  let b =  0.0557*X - 0.2040*Y + 1.0570*Z;
+  // Clamp negatives gently
+  const maxv = Math.max(r, g, b, 0.0001);
+  r = r / maxv; g = g / maxv; b = b / maxv;
+  r = Math.max(0, r); g = Math.max(0, g); b = Math.max(0, b);
+  // Gamma
+  const gam = v => v <= 0.0031308 ? 12.92*v : 1.055*Math.pow(v, 1/2.4) - 0.055;
+  return [Math.round(gam(r)*255), Math.round(gam(g)*255), Math.round(gam(b)*255)];
+}
+
+function buildCIEBackground(canvas) {
+  const W = canvas.width, H = canvas.height;
+  // Diagram bounds in xy
+  const xMin = 0.0, xMax = 0.78, yMin = 0.0, yMax = 0.90;
+  const toCanvasX = x => ((x - xMin) / (xMax - xMin)) * W;
+  const toCanvasY = y => H - ((y - yMin) / (yMax - yMin)) * H;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw colored gamut using image data
+  const imgData = ctx.createImageData(W, H);
+  const data = imgData.data;
+
+  // Build spectral locus polygon for point-in-polygon test
+  const locus = SPECTRAL_LOCUS.map(p => ({ x: toCanvasX(p.x), y: toCanvasY(p.y) }));
+  // Close with line from 700nm back to 380nm
+  locus.push({ x: toCanvasX(SPECTRAL_LOCUS[0].x), y: toCanvasY(SPECTRAL_LOCUS[0].y) });
+
+  function pointInPolygon(px, py, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i].x, yi = poly[i].y;
+      const xj = poly[j].x, yj = poly[j].y;
+      if (((yi > py) !== (yj > py)) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+
+  for (let py = 0; py < H; py++) {
+    for (let px = 0; px < W; px++) {
+      const idx = (py * W + px) * 4;
+      const cx = xMin + (px / W) * (xMax - xMin);
+      const cy = yMax - (py / H) * (yMax - yMin);
+      if (pointInPolygon(px, py, locus)) {
+        const [r, g, b] = xyToSRGB(cx, cy);
+        data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = 200;
+      } else {
+        data[idx+3] = 0;
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return { ctx, W, H, xMin, xMax, yMin, yMax, toCanvasX, toCanvasY, locus };
+}
+
+function drawCIEDiagram(canvas, measuredPts) {
+  const W = canvas.width, H = canvas.height;
+  const xMin = 0.0, xMax = 0.78, yMin = 0.0, yMax = 0.90;
+  const toCanvasX = x => ((x - xMin) / (xMax - xMin)) * W;
+  const toCanvasY = y => H - ((y - yMin) / (yMax - yMin)) * H;
+  const ctx = canvas.getContext('2d');
+
+  // Use cached background or build new
+  const bgCanvas = document.createElement('canvas');
+  bgCanvas.width = W; bgCanvas.height = H;
+  buildCIEBackground(bgCanvas);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Dark background
+  ctx.fillStyle = '#161922';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw gamut background
+  ctx.drawImage(bgCanvas, 0, 0);
+
+  // Spectral locus border
+  ctx.beginPath();
+  SPECTRAL_LOCUS.forEach((p, i) => {
+    const cx = toCanvasX(p.x), cy = toCanvasY(p.y);
+    i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
+  });
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // Wavelength labels on locus
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = '9px Share Tech Mono, monospace';
+  ctx.textAlign = 'center';
+  const wlLabels = [460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 620, 650, 700];
+  SPECTRAL_LOCUS.forEach(p => {
+    if (wlLabels.includes(p.wl)) {
+      const cx = toCanvasX(p.x), cy = toCanvasY(p.y);
+      // Offset label outward from centroid ~(0.33, 0.33)
+      const dx = p.x - 0.33, dy = p.y - 0.33;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      const ox = (dx/len) * 12, oy = -(dy/len) * 12;
+      ctx.fillText(p.wl, cx + ox, cy + oy);
+    }
+  });
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  // x axis labels
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '10px Share Tech Mono, monospace';
+  ctx.textAlign = 'center';
+  for (let xv = 0.1; xv <= 0.7; xv = Math.round((xv + 0.1)*10)/10) {
+    const cx = toCanvasX(xv);
+    ctx.beginPath(); ctx.moveTo(cx, H-1); ctx.lineTo(cx, H-5); ctx.stroke();
+    ctx.fillText(xv.toFixed(1), cx, H - 6);
+  }
+  ctx.textAlign = 'right';
+  for (let yv = 0.1; yv <= 0.8; yv = Math.round((yv + 0.1)*10)/10) {
+    const cy = toCanvasY(yv);
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(5, cy); ctx.stroke();
+    ctx.fillText(yv.toFixed(1), 22, cy + 3);
+  }
+
+  // Axis titles
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '11px Share Tech Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('x', W/2, H + 0); // below
+  ctx.save();
+  ctx.translate(8, H/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('y', 0, 0);
+  ctx.restore();
+
+  // sRGB gamut triangle
+  const srgb = [
+    { x: 0.6400, y: 0.3300 }, // R
+    { x: 0.3000, y: 0.6000 }, // G
+    { x: 0.1500, y: 0.0600 }, // B
+  ];
+  ctx.beginPath();
+  srgb.forEach((p, i) => {
+    const cx = toCanvasX(p.x), cy = toCanvasY(p.y);
+    i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
+  });
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.setLineDash([5, 3]);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // D65 point
+  const d65cx = toCanvasX(0.3127), d65cy = toCanvasY(0.3290);
+  ctx.beginPath();
+  ctx.arc(d65cx, d65cy, 5, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '9px Share Tech Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('D65', d65cx + 7, d65cy + 3);
+
+  // ── Draw reference points (empty circles) ────────────────────────────────
+  CC_PATCHES.forEach((p, i) => {
+    const cx = toCanvasX(p.ref.x), cy = toCanvasY(p.ref.y);
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  });
+
+  // ── Draw measured points (filled) ─────────────────────────────────────────
+  measuredPts.forEach((pt, i) => {
+    if (!pt) return;
+    const p = CC_PATCHES[i];
+    const cx = toCanvasX(pt.x), cy = toCanvasY(pt.y);
+
+    // Line from ref to measured (if different)
+    const refcx = toCanvasX(p.ref.x), refcy = toCanvasY(p.ref.y);
+    const dist = Math.sqrt((pt.x - p.ref.x)**2 + (pt.y - p.ref.y)**2);
+    if (dist > 0.0005) {
+      ctx.beginPath();
+      ctx.moveTo(refcx, refcy);
+      ctx.lineTo(cx, cy);
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash([2, 2]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Filled circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI*2);
+    ctx.fillStyle = p.color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Patch number
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = 'bold 7px Share Tech Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(i + 1, cx, cy + 2.5);
+  });
+}
+
+function renderCCDiagram() {
+  initColorChecker();
+  const canvas = document.getElementById('ccCanvas');
+  if (!canvas) return;
+
+  // Parse measured points
+  const measured = ccData.map((d, i) => {
+    const x = parseFloat(d.x), y = parseFloat(d.y);
+    if (isNaN(x) || isNaN(y)) return null;
+    return { x, y };
+  });
+
+  drawCIEDiagram(canvas, measured);
+
+  // Build legend
+  const legend = document.getElementById('ccLegend');
+  if (legend) {
+    legend.innerHTML = '';
+    CC_PATCHES.forEach((p, i) => {
+      const item = document.createElement('div');
+      item.className = 'cc-leg-item';
+      item.innerHTML = `<div class="cc-leg-dot" style="background:${p.color}"></div><span>${i+1}. ${p.name}</span>`;
+      legend.appendChild(item);
+    });
+  }
+
+  // Build delta table
+  const wrap = document.getElementById('ccTableWrap');
+  if (!wrap) return;
+
+  const rows = measured.map((pt, i) => {
+    if (!pt) return null;
+    const p = CC_PATCHES[i];
+    const dx = pt.x - p.ref.x;
+    const dy = pt.y - p.ref.y;
+    const dxy = Math.sqrt(dx*dx + dy*dy);
+    return { i, dx, dy, dxy, pt, p };
+  }).filter(Boolean);
+
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="empty-state">Brak danych pomiarowych.</div>';
+    return;
+  }
+
+  let html = `<table class="cc-delta-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Pole</th>
+        <th>x ref</th><th>y ref</th>
+        <th>x meas</th><th>y meas</th>
+        <th>Δx</th><th>Δy</th>
+        <th>Δxy</th>
+        <th>Ocena</th>
+      </tr>
+    </thead>
+    <tbody>`;
+  rows.forEach(r => {
+    const ok = r.dxy < 0.005;
+    const warn = r.dxy >= 0.010;
+    const col = ok ? '#36b37e' : warn ? '#e5534b' : '#f0a050';
+    const badge = ok ? 'good' : warn ? 'warn' : 'neutral';
+    const badgeText = ok ? '✓' : warn ? '⚠' : '△';
+    html += `<tr>
+      <td style="color:var(--text3)">${r.i+1}</td>
+      <td><span class="cc-swatch-cell" style="background:${r.p.color}"></span> ${r.p.name}</td>
+      <td>${r.p.ref.x.toFixed(4)}</td><td>${r.p.ref.y.toFixed(4)}</td>
+      <td>${r.pt.x.toFixed(4)}</td><td>${r.pt.y.toFixed(4)}</td>
+      <td style="color:${Math.abs(r.dx) > 0.003 ? '#f0a050' : 'inherit'}">${r.dx >= 0 ? '+' : ''}${r.dx.toFixed(5)}</td>
+      <td style="color:${Math.abs(r.dy) > 0.003 ? '#f0a050' : 'inherit'}">${r.dy >= 0 ? '+' : ''}${r.dy.toFixed(5)}</td>
+      <td style="color:${col};font-weight:600">${r.dxy.toFixed(5)}</td>
+      <td><span class="badge ${badge}">${badgeText} ${r.dxy < 0.005 ? '< 0.005' : r.dxy < 0.010 ? '< 0.010' : '> 0.010'}</span></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// ─── PNG Export ───────────────────────────────────────────────────────────────
+
+// Palette for white-background rendering
+const PNG = {
+  bg:      '#ffffff',
+  bg2:     '#f5f6f8',
+  bg3:     '#eceef2',
+  border:  '#d0d4de',
+  text:    '#1a1d26',
+  text2:   '#4a4f60',
+  text3:   '#8b90a0',
+  accent:  '#7a0fa8',
+  green:   '#1e8c5a',
+  red:     '#c0392b',
+  orange:  '#c07828',
+  R:       '#c04820',
+  G:       '#2e8020',
+  B:       '#2060b8',
+  W:       '#606060',
+  mono:    'Share Tech Mono, monospace',
+  sans:    'Rajdhani, sans-serif',
+};
+
+// Measure text width helper
+function tw(ctx, text) { return ctx.measureText(text).width; }
+
+// Draw a rounded rect
+function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+}
+
+// Draw header bar
+function drawHeader(ctx, W, title, subtitle) {
+  roundRect(ctx, 0, 0, W, 52, 0, PNG.bg2, null);
+  ctx.strokeStyle = PNG.border; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, 52); ctx.lineTo(W, 52); ctx.stroke();
+  ctx.fillStyle = PNG.text; ctx.font = `600 15px ${PNG.sans}`;
+  ctx.textAlign = 'left'; ctx.fillText(title, 20, 22);
+  ctx.fillStyle = PNG.text3; ctx.font = `11px ${PNG.mono}`;
+  ctx.fillText(subtitle, 20, 40);
+  // right label
+  ctx.fillStyle = PNG.text3; ctx.font = `10px ${PNG.mono}`;
+  ctx.textAlign = 'right';
+  ctx.fillText('Chromatic Data Analyser · CIE 1931', W - 16, 32);
+}
+
+// Draw metric card
+function drawMetricCard(ctx, x, y, w, h, label, value, sub, accentColor) {
+  roundRect(ctx, x, y, w, h, 6, PNG.bg2, PNG.border);
+  ctx.fillStyle = accentColor || PNG.text3; ctx.font = `500 10px ${PNG.mono}`;
+  ctx.textAlign = 'left';
+  ctx.fillText(label, x+12, y+18);
+  ctx.fillStyle = PNG.text; ctx.font = `600 20px ${PNG.mono}`;
+  ctx.fillText(value, x+12, y+42);
+  if (sub) {
+    ctx.fillStyle = PNG.text3; ctx.font = `10px ${PNG.mono}`;
+    ctx.fillText(sub, x+12, y+58);
+  }
+}
+
+// Draw metric card — compact version for export
+function drawMetricCardSmall(ctx, x, y, w, h, label, value, sub, accentColor) {
+  roundRect(ctx, x, y, w, h, 6, PNG.bg2, PNG.border);
+  ctx.fillStyle = accentColor || PNG.text3; ctx.font = `500 10px ${PNG.mono}`;
+  ctx.textAlign = 'left';
+  ctx.fillText(label, x+12, y+16);
+  ctx.fillStyle = PNG.text; ctx.font = `600 17px ${PNG.mono}`;
+  ctx.fillText(value, x+12, y+36);
+  if (sub) {
+    ctx.fillStyle = PNG.text3; ctx.font = `9px ${PNG.mono}`;
+    ctx.fillText(sub, x+12, y+50);
+  }
+}
+
+
+// Proper approach: re-render the chart at target resolution instead of scaling bitmap
+function reDrawChartWhite(chartInstance, targetCtx, x, y, w, h, overrides) {
+  if (!chartInstance || !chartInstance.canvas) return false;
+
+  // Create an offscreen canvas at exact target dimensions (2x for sharpness)
+  const scale = 2;
+  const offscreen = document.createElement('canvas');
+  offscreen.width  = w * scale;
+  offscreen.height = h * scale;
+  offscreen.style.width  = w + 'px';
+  offscreen.style.height = h + 'px';
+
+  // Deep-clone the chart config so we don't mutate the live chart
+  const origConfig = chartInstance.config;
+
+  // Build light-theme dataset overrides (swap dark grid/tick colors for export)
+  const datasetsClone = (origConfig.data.datasets || []).map(ds => {
+    const d = Object.assign({}, ds);
+    // Replace near-transparent or dark grid lines with export-friendly colors
+    if (d.borderColor === 'rgba(255,255,255,0.22)') d.borderColor = 'rgba(0,0,0,0.18)';
+    if (d.borderColor === 'rgba(255,255,255,0.15)') d.borderColor = 'rgba(0,0,0,0.12)';
+    if (d.backgroundColor && typeof d.backgroundColor === 'string') {
+      d.backgroundColor = d.backgroundColor
+        .replace('rgba(255,255,255,', 'rgba(0,0,0,')
+        .replace('rgba(216,90,48,0.08)', 'rgba(216,90,48,0.10)')
+        .replace('rgba(74,158,47,0.08)',  'rgba(74,158,47,0.10)')
+        .replace('rgba(61,127,214,0.08)', 'rgba(61,127,214,0.10)')
+        .replace('rgba(54,179,126,0.08)', 'rgba(54,179,126,0.10)')
+        .replace('rgba(79,142,247,0.08)', 'rgba(79,142,247,0.10)');
+    }
+    // Thicken lines and points for print quality (3× original, min 6)
+    if (d.borderWidth != null) d.borderWidth = Math.max(6, (d.borderWidth || 2) * 3);
+    if (d.pointRadius != null && d.pointRadius > 0) d.pointRadius = Math.max(8, (d.pointRadius || 4) * 2.5);
+    if (d.pointHoverRadius != null) d.pointHoverRadius = d.pointRadius;
+    return d;
+  });
+
+  // Clone scales with light-theme colors
+  function lightScale(origScale) {
+    if (!origScale) return origScale;
+    const s = JSON.parse(JSON.stringify(origScale));
+    function fixColor(obj) {
+      if (!obj || typeof obj !== 'object') return;
+      Object.keys(obj).forEach(k => {
+        if (typeof obj[k] === 'string') {
+          if (obj[k].startsWith('rgba(255,255,255,') || obj[k] === '#555555' || obj[k] === 'rgba(255,255,255,0.05)' || obj[k] === 'rgba(255,255,255,0.07)') {
+            if (obj[k] === '#555555') obj[k] = PNG.text3;
+            else obj[k] = 'rgba(0,0,0,0.08)';
+          }
+        } else if (typeof obj[k] === 'object') {
+          fixColor(obj[k]);
+        }
+      });
+    }
+    fixColor(s);
+    // Enlarge tick and title fonts for print readability
+    if (s.ticks && s.ticks.font) s.ticks.font.size = Math.max(16, (s.ticks.font.size || 11) * 1.6);
+    else if (s.ticks) s.ticks.font = { size: 16 };
+    if (s.title && s.title.font) s.title.font.size = Math.max(16, (s.title.font.size || 11) * 1.6);
+    else if (s.title && s.title.display) s.title.font = { size: 16 };
+    return s;
+  }
+
+  const origScales = (origConfig.options || {}).scales || {};
+  const lightScales = {};
+  Object.keys(origScales).forEach(k => { lightScales[k] = lightScale(origScales[k]); });
+
+  // Apply dot-path overrides to scales, e.g. {'scales.y.min': 98}
+  if (overrides) {
+    Object.entries(overrides).forEach(([path, val]) => {
+      const parts = path.split('.');
+      if (parts[0] === 'scales' && parts.length >= 3) {
+        const axis = parts[1];
+        if (!lightScales[axis]) lightScales[axis] = {};
+        let obj = lightScales[axis];
+        for (let i = 2; i < parts.length - 1; i++) {
+          if (!obj[parts[i]]) obj[parts[i]] = {};
+          obj = obj[parts[i]];
+        }
+        if (val === undefined) delete obj[parts[parts.length-1]];
+        else obj[parts[parts.length-1]] = val;
+      }
+    });
+  }
+
+  // Build export chart options
+  const exportOptions = Object.assign({}, origConfig.options, {
+    responsive: false,
+    maintainAspectRatio: false,
+    animation: false,
+    devicePixelRatio: scale,
+    plugins: Object.assign({}, (origConfig.options || {}).plugins, {
+      legend: { display: false },
+      tooltip: { enabled: false },
+    }),
+    scales: lightScales,
+  });
+
+  // Render new chart
+  const exportChart = new Chart(offscreen, {
+    type: origConfig.type,
+    data: {
+      labels: (origConfig.data.labels || []).slice(),
+      datasets: datasetsClone,
+    },
+    options: exportOptions,
+  });
+
+  // Give Chart.js one tick to finish rendering, then blit
+  // (Chart.js with animation:false renders synchronously)
+  targetCtx.fillStyle = PNG.bg;
+  targetCtx.fillRect(x, y, w, h);
+  targetCtx.drawImage(offscreen, 0, 0, offscreen.width, offscreen.height, x, y, w, h);
+
+  exportChart.destroy();
+  return true;
+}
+
+// Draw section label
+function drawSectionLabel(ctx, x, y, W, text) {
+  ctx.fillStyle = PNG.text3; ctx.font = `500 10px ${PNG.mono}`;
+  ctx.textAlign = 'left';
+  ctx.fillText(text.toUpperCase(), x, y);
+  ctx.strokeStyle = PNG.border; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x + tw(ctx, text.toUpperCase()) + 8, y - 4); ctx.lineTo(W - x, y - 4); ctx.stroke();
+}
+
+// Collect metric cards from a DOM container
+function collectMetrics(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('.metric')).map(m => ({
+    label: (m.querySelector('.metric-label') || {}).textContent || '',
+    value: (m.querySelector('.metric-value') || {}).textContent || '',
+    sub:   (m.querySelector('.metric-sub') || {}).textContent || '',
+    badge: (m.querySelector('.badge') || {}).textContent || '',
+    badgeClass: (m.querySelector('.badge') || {}).className || '',
+  }));
+}
+
+function badgeColor(cls) {
+  if (cls.includes('good')) return PNG.green;
+  if (cls.includes('warn')) return PNG.red;
+  return PNG.text3;
+}
+
+// Download canvas as PNG
+function downloadCanvas(canvas, filename) {
+  // If canvas has _logicalWidth it was already scaled externally (e.g. CC image)
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = filename;
+  a.click();
+}
+
+// Create a 2× hi-res canvas with ctx pre-scaled, returns {canvas, ctx}
+function makeHiResCanvas(W, H) {
+  const SCALE = 2;
+  const c = document.createElement('canvas');
+  c.width = W * SCALE; c.height = H * SCALE;
+  const ctx = c.getContext('2d');
+  ctx.scale(SCALE, SCALE);
+  return { canvas: c, ctx };
+}
+
+// ── Show preview ─────────────────────────────────────────────────────────────
+function showPreview(canvas) {
+  const preview = document.getElementById('exportPngPreview');
+  const previewCanvas = document.getElementById('exportPreviewCanvas');
+  // Draw the hi-res canvas scaled down to fit preview area
+  const maxW = 1040;
+  const logW = canvas._logicalWidth || canvas.width;
+  const logH = canvas._logicalHeight || canvas.height;
+  const ratio = canvas.width / logW; // e.g. 2 for 2× canvases
+  const displayW = Math.min(maxW, logW);
+  const displayH = Math.round(logH * displayW / logW);
+  previewCanvas.width = canvas.width;
+  previewCanvas.height = canvas.height;
+  previewCanvas.style.width = displayW + 'px';
+  previewCanvas.style.height = displayH + 'px';
+  previewCanvas.getContext('2d').drawImage(canvas, 0, 0);
+  preview.style.display = '';
+  preview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Individual exports ────────────────────────────────────────────────────────
+
+function buildChromaImage() {
+  const W = 1040, PAD = 20;
+  const metrics = collectMetrics('chromaCards');
+  const cardH = 76, CARDS = metrics.length;
+  const H = 52 + 14 + 36 + 260 + 14 + 36 + 260 + 14 + 36 + (CARDS > 0 ? cardH + 14 : 0) + PAD*2;
+  const { canvas: c, ctx } = makeHiResCanvas(W, H);
+  ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
+  drawHeader(ctx, W, 'Chromatyczność — odchylenie od D65', 'Δx · Δy · CIE 1931');
+  let cy = 52 + PAD;
+  drawSectionLabel(ctx, PAD, cy + 10, W, 'Δx — odchylenie od D65 (x_D65 = 0.3127)');
+  cy += 22;
+  roundRect(ctx, PAD, cy, W-PAD*2, 250, 6, PNG.bg, PNG.border);
+  reDrawChartWhite(charts['dx'], ctx, PAD+10, cy+10, W-PAD*2-20, 230);
+  cy += 264;
+  drawSectionLabel(ctx, PAD, cy + 10, W, 'Δy — odchylenie od D65 (y_D65 = 0.3290)');
+  cy += 22;
+  roundRect(ctx, PAD, cy, W-PAD*2, 250, 6, PNG.bg, PNG.border);
+  reDrawChartWhite(charts['dy'], ctx, PAD+10, cy+10, W-PAD*2-20, 230);
+  cy += 264;
+  if (CARDS > 0) {
+    drawSectionLabel(ctx, PAD, cy + 10, W, 'Podsumowanie');
+    cy += 22;
+    const cw = Math.floor((W - PAD*2 - (CARDS-1)*8) / CARDS);
+    metrics.forEach((m, i) => {
+      const color = m.label.includes('R') ? PNG.R : m.label.includes('G') ? PNG.G : m.label.includes('B') ? PNG.B : PNG.W;
+      drawMetricCard(ctx, PAD + i*(cw+8), cy, cw, cardH, m.label, m.value, m.sub, color);
+    });
+  }
+  return c;
+}
+
+function buildRGBTrackImage() {
+  const W = 1040, PAD = 20;
+  const metrics = collectMetrics('rgbTrackCards');
+  const cardH = 60; // smaller cards
+  const CHART_H = 360;
+  const H = 52 + PAD + 36 + 20 + CHART_H + 14 + (metrics.length > 0 ? 36 + cardH + 14 : 0) + PAD;
+  const { canvas: c, ctx } = makeHiResCanvas(W, H);
+  ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
+  drawHeader(ctx, W, 'RGB Tracking — gain kanałów R / G / B', 'Wartość idealna: 100% · dane źródłowe: kanał W');
+  let cy = 52 + PAD;
+  drawSectionLabel(ctx, PAD, cy+10, W, 'Gain R / G / B [%] — wartość idealna: 100');
+  cy += 22;
+  // legend
+  [['Red', PNG.R],['Green', PNG.G],['Blue', PNG.B]].forEach(([lbl, col], i) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(PAD + i*100, cy+2, 28, 4);
+    ctx.fillStyle = PNG.text; ctx.font = `500 12px ${PNG.sans}`; ctx.textAlign = 'left';
+    ctx.fillText(lbl, PAD + i*100 + 34, cy+8);
+  });
+  cy += 20;
+
+  // ── Compute tight Y range from actual data ────────────────────────────────
+  const ch = charts['rgbTrack'];
+  let exportYMin, exportYMax;
+  if (ch && ch.config && ch.config.data) {
+    const allVals = ch.config.data.datasets
+      .filter(ds => ds.pointRadius !== 0) // skip the 100% reference line
+      .flatMap(ds => (ds.data || []).filter(v => v !== null));
+    if (allVals.length) {
+      const dMin = Math.min(...allVals);
+      const dMax = Math.max(...allVals);
+      const margin = Math.max(0.5, (dMax - dMin) * 0.4 + 0.3);
+      exportYMin = Math.floor((Math.min(dMin, 100) - margin) * 10) / 10;
+      exportYMax = Math.ceil((Math.max(dMax, 100) + margin) * 10) / 10;
+    }
+  }
+
+  roundRect(ctx, PAD, cy, W-PAD*2, CHART_H, 6, PNG.bg, PNG.border);
+  reDrawChartWhite(ch, ctx, PAD+10, cy+10, W-PAD*2-20, CHART_H-20, {
+    'scales.y.min': exportYMin,
+    'scales.y.max': exportYMax,
+    'scales.y.ticks.stepSize': undefined,
+  });
+  cy += CHART_H + 14;
+  if (metrics.length > 0) {
+    drawSectionLabel(ctx, PAD, cy+10, W, 'Podsumowanie');
+    cy += 22;
+    const cols = Math.min(metrics.length, 4);
+    const cw = Math.floor((W - PAD*2 - (cols-1)*8) / cols);
+    metrics.forEach((m, i) => {
+      const row = Math.floor(i/cols), col2 = i%cols;
+      const color = m.label.includes('Red') ? PNG.R : m.label.includes('Green') ? PNG.G : m.label.includes('Blue') ? PNG.B : PNG.text3;
+      drawMetricCardSmall(ctx, PAD + col2*(cw+8), cy + row*(cardH+8), cw, cardH, m.label, m.value, m.sub, color);
+    });
+  }
+  return c;
+}
+
+function buildDEImage() {
+  const W = 1040, PAD = 20;
+  const metrics = collectMetrics('deCards');
+  const cardH = 76;
+  // Count per-channel blocks
+  const perChBlocks = document.querySelectorAll('#dePerChannelWrap .de-ch-block');
+  const perChH = perChBlocks.length * (220 + 8);
+  const H = 52 + PAD + 36 + 270 + 8 + 36 + 270 + 14 + 36 + (metrics.length > 0 ? cardH + 14 : 0) + (perChBlocks.length > 0 ? 36 + perChH : 0) + PAD;
+  const { canvas: c, ctx } = makeHiResCanvas(W, H);
+  ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
+  drawHeader(ctx, W, 'Błędy koloru ΔE — drift względem D65', 'ΔE2000 · ΔE ITP · chromatyczność znormalizowana do Y=100');
+  let cy = 52 + PAD;
+  drawSectionLabel(ctx, PAD, cy+10, W, 'ΔE2000 — drift względem punktu 100% kanału');
+  cy += 22;
+  roundRect(ctx, PAD, cy, W-PAD*2, 260, 6, PNG.bg, PNG.border);
+  reDrawChartWhite(charts['de2'], ctx, PAD+10, cy+10, W-PAD*2-20, 240);
+  cy += 274;
+  drawSectionLabel(ctx, PAD, cy+10, W, 'ΔE ITP — drift HDR');
+  cy += 22;
+  roundRect(ctx, PAD, cy, W-PAD*2, 260, 6, PNG.bg, PNG.border);
+  reDrawChartWhite(charts['deITP'], ctx, PAD+10, cy+10, W-PAD*2-20, 240);
+  cy += 274;
+  if (metrics.length > 0) {
+    drawSectionLabel(ctx, PAD, cy+10, W, 'Podsumowanie');
+    cy += 22;
+    const cols = Math.min(metrics.length, 4);
+    const cw = Math.floor((W - PAD*2 - (cols-1)*8) / cols);
+    metrics.forEach((m, i) => {
+      const color = m.label.includes('R') ? PNG.R : m.label.includes('G') ? PNG.G : m.label.includes('B') ? PNG.B : PNG.W;
+      drawMetricCard(ctx, PAD + i*(cw+8), cy, cw, cardH, m.label, m.value, m.sub, color);
+    });
+    cy += cardH + 14;
+  }
+  // Per-channel charts
+  if (perChBlocks.length > 0) {
+    drawSectionLabel(ctx, PAD, cy+10, W, 'Błędy ΔE per kanał');
+    cy += 22;
+    ['R','G','B','W'].forEach(ch => {
+      const c2 = charts['de2_'+ch], c3 = charts['deITP_'+ch];
+      if (!c2 && !c3) return;
+      const color = COLORS[ch];
+      roundRect(ctx, PAD, cy, W-PAD*2, 210, 6, PNG.bg2, PNG.border);
+      ctx.fillStyle = color; ctx.font = `600 13px ${PNG.mono}`; ctx.textAlign = 'left';
+      ctx.fillText('Kanał ' + ch, PAD+12, cy+18);
+      const hw = Math.floor((W-PAD*2-8)/2 - 8);
+      if (c2) {
+        roundRect(ctx, PAD+8, cy+24, hw, 178, 4, PNG.bg, PNG.border);
+        reDrawChartWhite(c2, ctx, PAD+8+6, cy+24+6, hw-12, 166);
+      }
+      if (c3) {
+        roundRect(ctx, PAD+8+hw+8, cy+24, hw, 178, 4, PNG.bg, PNG.border);
+        reDrawChartWhite(c3, ctx, PAD+8+hw+8+6, cy+24+6, hw-12, 166);
+      }
+      cy += 218;
+    });
+  }
+  return c;
+}
+
+function buildGrayscaleImage() {
+  const W = 1040, PAD = 20;
+  const metrics = collectMetrics('gsCards');
+  const cardH = 76, cols = Math.min(metrics.length, 5);
+  const H = 52 + PAD + 36 + 310 + 14 + 36 + (metrics.length > 0 ? cardH + 14 : 0) + PAD;
+  const { canvas: c, ctx } = makeHiResCanvas(W, H);
+  ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
+  drawHeader(ctx, W, 'Grayscale — stabilność punktu bieli (kanał W)', 'Δx · Δy od D65 · WB ΔE2000 w funkcji poziomu sygnału');
+  let cy = 52 + PAD;
+  drawSectionLabel(ctx, PAD, cy+10, W, 'Tracking punktu bieli · WB ΔE2000');
+  cy += 22;
+  const hw = Math.floor((W - PAD*2 - 8) / 2);
+  const innerPad = 10;
+  roundRect(ctx, PAD, cy, hw, 300, 6, PNG.bg, PNG.border);
+  reDrawChartWhite(charts['gsTrack'], ctx, PAD+innerPad, cy+innerPad, hw-innerPad*2, 300-innerPad*2);
+  roundRect(ctx, PAD+hw+8, cy, hw, 300, 6, PNG.bg, PNG.border);
+  reDrawChartWhite(charts['gsDe'], ctx, PAD+hw+8+innerPad, cy+innerPad, hw-innerPad*2, 300-innerPad*2);
+  cy += 314;
+  if (metrics.length > 0) {
+    drawSectionLabel(ctx, PAD, cy+10, W, 'Podsumowanie');
+    cy += 22;
+    const cw = Math.floor((W - PAD*2 - (cols-1)*8) / cols);
+    metrics.forEach((m, i) => {
+      drawMetricCard(ctx, PAD + i*(cw+8), cy, cw, cardH, m.label, m.value, m.sub, PNG.accent);
+    });
+  }
+  return c;
+}
+
+function buildAPLImage() {
+  const W = 1040, PAD = 20;
+  const metrics = collectMetrics('aplMetrics');
+  const cardH = 76, cols = Math.min(metrics.length, 5);
+  const H = 52 + PAD + 36 + 370 + 14 + 36 + (metrics.length > 0 ? cardH + 14 : 0) + PAD;
+  const { canvas: c, ctx } = makeHiResCanvas(W, H);
+  ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
+  const devName = (document.getElementById('aplDeviceName') || {}).value || 'Urządzenie';
+  drawHeader(ctx, W, 'APL Brightness — luminancja w funkcji wypełnienia', devName);
+  let cy = 52 + PAD;
+  drawSectionLabel(ctx, PAD, cy+10, W, 'Jasność matrycy [cd/m²] vs APL [%]');
+  cy += 22;
+  roundRect(ctx, PAD, cy, W-PAD*2, 360, 6, PNG.bg, PNG.border);
+  reDrawChartWhite(aplChartInstance, ctx, PAD+10, cy+10, W-PAD*2-20, 340);
+  cy += 374;
+  if (metrics.length > 0) {
+    drawSectionLabel(ctx, PAD, cy+10, W, 'Podsumowanie');
+    cy += 22;
+    const cw = Math.floor((W - PAD*2 - (cols-1)*8) / cols);
+    metrics.forEach((m, i) => {
+      drawMetricCard(ctx, PAD + i*(cw+8), cy, cw, cardH, m.label, m.value, m.sub, PNG.orange);
+    });
+  }
+  return c;
+}
+
+function buildCCImage() {
+  const W = 1040, PAD = 20;
+  const rows = ccData.map((d, i) => {
+    const x = parseFloat(d.x), y = parseFloat(d.y);
+    if (isNaN(x) || isNaN(y)) return null;
+    const p = CC_PATCHES[i];
+    const dx = x - p.ref.x, dy = y - p.ref.y;
+    return { i, x, y, dx, dy, dxy: Math.sqrt(dx*dx+dy*dy), p };
+  }).filter(Boolean);
+
+  const DIAG_W = W - PAD*2;
+  const DIAG_H = Math.round(DIAG_W * 0.78); // ~810×632 — good CIE proportions
+  const tableH = rows.length > 0 ? 26 + rows.length * 24 + 14 : 0;
+  const H = 52 + PAD + 36 + DIAG_H + 14 + (tableH > 0 ? 36 + tableH : 0) + PAD;
+
+  // Use 2× pixel ratio for crisp output
+  const SCALE = 2;
+  const c = document.createElement('canvas');
+  c.width = W * SCALE; c.height = Math.max(H, 200) * SCALE;
+  const ctx = c.getContext('2d');
+  ctx.scale(SCALE, SCALE);
+  ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
+
+  drawHeader(ctx, W, 'Colour Checker — CIE 1931 xy', 'Macbeth ColorChecker 24 · pomiary vs referencja D50');
+  let cy = 52 + PAD;
+  drawSectionLabel(ctx, PAD, cy+10, W, 'Diagram CIE 1931 xy');
+  cy += 22;
+
+  // ── Draw CIE diagram fresh on light background ────────────────────────────
+  const dW = DIAG_W, dH = DIAG_H;
+  const xMin = 0.0, xMax = 0.78, yMin = 0.0, yMax = 0.90;
+  const toX = x => PAD + ((x - xMin) / (xMax - xMin)) * dW;
+  const toY = y => cy + dH - ((y - yMin) / (yMax - yMin)) * dH;
+
+  // Card background
+  roundRect(ctx, PAD, cy, dW, dH, 6, '#f8f9fb', PNG.border);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(PAD, cy, dW, dH);
+  ctx.clip();
+
+  // CIE gamut fill — rebuild on light bg
+  const offCC = document.createElement('canvas');
+  offCC.width = dW; offCC.height = dH;
+  const offCtx = offCC.getContext('2d');
+  // White base
+  offCtx.fillStyle = '#f8f9fb'; offCtx.fillRect(0, 0, dW, dH);
+  // Clip to spectral locus
+  offCtx.beginPath();
+  SPECTRAL_LOCUS.forEach((p, i) => {
+    const cx = ((p.x - xMin) / (xMax - xMin)) * dW;
+    const cy2 = dH - ((p.y - yMin) / (yMax - yMin)) * dH;
+    i === 0 ? offCtx.moveTo(cx, cy2) : offCtx.lineTo(cx, cy2);
+  });
+  offCtx.closePath();
+  offCtx.clip();
+  // Draw the CIE color fill using the background builder
+  buildCIEBackground(offCC);
+  ctx.drawImage(offCC, PAD, cy);
+
+  // Spectral locus outline
+  ctx.beginPath();
+  SPECTRAL_LOCUS.forEach((p, i) => {
+    i === 0 ? ctx.moveTo(toX(p.x), toY(p.y)) : ctx.lineTo(toX(p.x), toY(p.y));
+  });
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Wavelength labels
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.font = '10px Share Tech Mono, monospace';
+  ctx.textAlign = 'center';
+  const wlLabels = [460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 620, 650, 700];
+  SPECTRAL_LOCUS.forEach(p => {
+    if (wlLabels.includes(p.wl)) {
+      const dx = p.x - 0.33, dy2 = p.y - 0.33;
+      const len = Math.sqrt(dx*dx + dy2*dy2);
+      const ox = (dx/len) * 14, oy = -(dy2/len) * 14;
+      ctx.fillText(p.wl, toX(p.x) + ox, toY(p.y) + oy);
+    }
+  });
+
+  // Axis tick lines + labels
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.font = '10px Share Tech Mono, monospace';
+  ctx.textAlign = 'center';
+  for (let xv = 0.1; xv <= 0.7; xv = Math.round((xv+0.1)*10)/10) {
+    const cx2 = toX(xv);
+    ctx.beginPath(); ctx.moveTo(cx2, cy+dH-1); ctx.lineTo(cx2, cy+dH-6); ctx.stroke();
+    ctx.fillText(xv.toFixed(1), cx2, cy+dH-8);
+  }
+  ctx.textAlign = 'right';
+  for (let yv = 0.1; yv <= 0.8; yv = Math.round((yv+0.1)*10)/10) {
+    const cy2 = toY(yv);
+    ctx.beginPath(); ctx.moveTo(PAD+1, cy2); ctx.lineTo(PAD+6, cy2); ctx.stroke();
+    ctx.fillText(yv.toFixed(1), PAD+24, cy2+3);
+  }
+
+  // sRGB gamut
+  const srgb = [{x:0.64,y:0.33},{x:0.30,y:0.60},{x:0.15,y:0.06}];
+  ctx.beginPath();
+  srgb.forEach((p, i) => { i===0 ? ctx.moveTo(toX(p.x),toY(p.y)) : ctx.lineTo(toX(p.x),toY(p.y)); });
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.setLineDash([5,3]); ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+
+  // D65
+  const d65x = toX(0.3127), d65y = toY(0.3290);
+  ctx.beginPath(); ctx.arc(d65x, d65y, 5, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(30,30,30,0.85)'; ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.font = '10px Share Tech Mono, monospace'; ctx.textAlign = 'left';
+  ctx.fillText('D65', d65x+8, d65y+4);
+
+  // Reference circles (empty)
+  CC_PATCHES.forEach(p => {
+    const cx2 = toX(p.ref.x), cy2 = toY(p.ref.y);
+    ctx.beginPath(); ctx.arc(cx2, cy2, 6, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.2; ctx.stroke();
+  });
+
+  // Measured points — filled, NO number labels (clean diagram)
+  rows.forEach(r => {
+    const cx2 = toX(r.x), cy2 = toY(r.y);
+    ctx.beginPath(); ctx.arc(cx2, cy2, 7, 0, Math.PI*2);
+    ctx.fillStyle = r.p.color; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  ctx.restore();
+  cy += dH + 14;
+
+  // ── Data table ────────────────────────────────────────────────────────────
+  if (rows.length > 0) {
+    drawSectionLabel(ctx, PAD, cy+10, W, 'Odchylenia od referencji');
+    cy += 22;
+    const cols2 = ['#','Pole','x ref','y ref','x meas','y meas','Δx','Δy','Δxy','Ocena'];
+    const colW = [28,145,65,65,65,65,74,74,74,72];
+    const ROW_H = 24;
+    roundRect(ctx, PAD, cy, W-PAD*2, ROW_H, 4, PNG.bg3, PNG.border);
+    let cx2 = PAD+10;
+    ctx.fillStyle = PNG.text3; ctx.font = `500 10px ${PNG.mono}`; ctx.textAlign = 'left';
+    cols2.forEach((h, i) => { ctx.fillText(h.toUpperCase(), cx2, cy+16); cx2 += colW[i]; });
+    cy += ROW_H;
+    rows.forEach((r, ri) => {
+      if (ri % 2 === 0) roundRect(ctx, PAD, cy, W-PAD*2, ROW_H, 0, PNG.bg2, null);
+      cx2 = PAD+10;
+      const ok = r.dxy < 0.005, warn2 = r.dxy >= 0.010;
+      const rowColor = ok ? PNG.green : warn2 ? PNG.red : PNG.orange;
+      const vals = [
+        r.i+1, r.p.name,
+        r.p.ref.x.toFixed(4), r.p.ref.y.toFixed(4),
+        r.x.toFixed(4), r.y.toFixed(4),
+        (r.dx>=0?'+':'')+r.dx.toFixed(5), (r.dy>=0?'+':'')+r.dy.toFixed(5),
+        r.dxy.toFixed(5),
+        (ok?'✓ <0.005':warn2?'⚠ >0.010':'△ <0.010')
+      ];
+      vals.forEach((v, vi) => {
+        ctx.fillStyle = vi >= 8 ? rowColor : PNG.text;
+        ctx.font = `${vi===1?'12':'11'}px ${PNG.mono}`;
+        ctx.fillText(String(v).substring(0, vi===1?20:13), cx2, cy+16);
+        cx2 += colW[vi];
+      });
+      // Swatch
+      ctx.fillStyle = r.p.color;
+      roundRect(ctx, PAD+36, cy+6, 12, 12, 2, r.p.color, null);
+      cy += ROW_H;
+    });
+  }
+
+  // Return canvas — note it's 2× so caller must handle
+  c._logicalWidth = W; c._logicalHeight = H;
+  return c;
+}
+
+// ── Main export dispatcher ────────────────────────────────────────────────────
+function exportPNG(view) {
+  let canvas, filename;
+  try {
+    switch(view) {
+      case 'chroma':       canvas = buildChromaImage();    filename = 'chromatycznosc.png'; break;
+      case 'rgbtrack':     canvas = buildRGBTrackImage();  filename = 'rgb_tracking.png'; break;
+      case 'de':           canvas = buildDEImage();        filename = 'bledy_deltaE.png'; break;
+      case 'grayscale':    canvas = buildGrayscaleImage(); filename = 'grayscale.png'; break;
+      case 'apl':          canvas = buildAPLImage();       filename = 'apl_brightness.png'; break;
+      case 'colorchecker': canvas = buildCCImage();        filename = 'colour_checker.png'; break;
+      default: return;
+    }
+    showPreview(canvas);
+    downloadCanvas(canvas, filename);
+    // button feedback
+    event.target.textContent = '✓ Pobrano';
+    event.target.style.color = '#1e8c5a';
+    setTimeout(() => { event.target.textContent = '↓ ' + event.target.textContent.replace('✓ Pobrano','').trim() || event.target.textContent; location.reload; }, 2000);
+    const orig = event.target.dataset.orig || event.target.textContent;
+    if (!event.target.dataset.orig) event.target.dataset.orig = orig;
+    setTimeout(() => { if(event.target) { event.target.textContent = event.target.dataset.orig; event.target.style.color = ''; }}, 2200);
+  } catch(e) {
+    alert('Błąd eksportu: ' + e.message + '\nUpewnij się że wykresy zostały wygenerowane.');
+    console.error(e);
+  }
+}
+
+async function exportAllPNG() {
+  const items = [
+    ['chroma','chromatycznosc.png'],
+    ['rgbtrack','rgb_tracking.png'],
+    ['de','bledy_deltaE.png'],
+    ['grayscale','grayscale.png'],
+    ['apl','apl_brightness.png'],
+    ['colorchecker','colour_checker.png'],
+  ];
+  const btn = event.target;
+  btn.textContent = 'Generuję...';
+  btn.disabled = true;
+  let done = 0;
+  for (const [view, filename] of items) {
+    try {
+      let canvas;
+      switch(view) {
+        case 'chroma':       canvas = buildChromaImage(); break;
+        case 'rgbtrack':     canvas = buildRGBTrackImage(); break;
+        case 'de':           canvas = buildDEImage(); break;
+        case 'grayscale':    canvas = buildGrayscaleImage(); break;
+        case 'apl':          canvas = buildAPLImage(); break;
+        case 'colorchecker': canvas = buildCCImage(); break;
+      }
+      downloadCanvas(canvas, filename);
+      done++;
+      btn.textContent = `Generuję... ${done}/${items.length}`;
+      await new Promise(r => setTimeout(r, 300));
+    } catch(e) { console.warn('Skip', view, e); }
+  }
+  btn.textContent = `✓ Pobrano ${done} plików`;
+  btn.style.color = '#1e8c5a';
+  setTimeout(() => { btn.textContent = '↓ Pobierz wszystkie'; btn.style.color = ''; btn.disabled = false; }, 3000);
+}
+
+
+</script>
+</body>
+</html>

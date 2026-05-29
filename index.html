@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Display Calibration Suite</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #080808;
+      --surface: #0f0f0f;
+      --surface2: #141414;
+      --border:  #1e1e1e;
+      --accent:  #8b15ba;
+      --accent3: #33ff33;
+      --warn:    #ff9100;
+      --text:    #e0e0e0;
+      --muted:   #555555;
+      --text2:   #777777;
+      --text3:   #3a3a3a;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Rajdhani', sans-serif;
+      --radius: 10px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(139,21,186,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139,21,186,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; display: none; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      width: 100%;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 24px 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 7px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .logo-icon span { border-radius: 2px; display: block; }
+    .lr { background: #ff3333; }
+    .lg { background: #33ff33; }
+    .lb { background: #3333ff; }
+    .lw { background: #ffffff; }
+
+    .header-text { text-align: left; }
+
+    .header-text h1 {
+      font-family: var(--mono);
+      font-size: 22px;
+      letter-spacing: 5px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .header-sub {
+      font-family: var(--sans);
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      margin-top: 6px;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      position: relative;
+      bottom: -1px;
+      padding: 0 24px;
+    }
+
+    .tab {
+      height: 42px;
+      padding: 0 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 10px 10px 0 0;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: color .18s, border-color .18s, background .18s;
+    }
+
+    .tab-num {
+      font-size: 9px;
+      color: var(--text3);
+      letter-spacing: 1px;
+      transition: color .18s;
+    }
+
+    .tab:hover {
+      color: var(--text2);
+      background: var(--surface2);
+      border-color: #2a2a2a;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      background: var(--bg);
+      border-color: var(--accent);
+      border-bottom: 1px solid var(--bg);
+    }
+
+    .tab.active .tab-num {
+      color: var(--accent);
+      opacity: 0.6;
+    }
+
+    /* ── Main ── */
+    main {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+    }
+
+    /* ── App panels ── */
+    .app-panel {
+      display: none;
+      width: 100%;
+      min-height: calc(100vh - 160px);
+    }
+
+    .app-panel.active {
+      display: block;
+      animation: fadeIn .2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .app-panel iframe {
+      width: 100%;
+      min-height: calc(100vh - 160px);
+      border: none;
+      display: block;
+    }
+
+    /* ── Shell fullscreen mode ── */
+    body.shell-fs { overflow: hidden; }
+    body.shell-fs header { display: none; }
+    body.shell-fs .app-panel,
+    body.shell-fs .app-panel iframe {
+      min-height: 100vh;
+      height: 100vh;
+    }
+
+    /* ── Fullscreen toggle button (in header) ── */
+    .btn-shell-fs {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text3);
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color .18s, border-color .18s;
+      flex-shrink: 0;
+    }
+    .btn-shell-fs:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* ── Exit fullscreen floating button ── */
+    .fs-exit-btn {
+      display: none;
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 9999;
+      padding: 7px 12px;
+      background: rgba(8,8,8,0.92);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s, color .18s, border-color .18s;
+    }
+    body.shell-fs .fs-exit-btn { display: flex; }
+    body.shell-fs:hover .fs-exit-btn {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .fs-exit-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button class="btn-shell-fs" id="btn-shell-fs" title="Fullscreen (F)" onclick="toggleShellFS()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M1 5V1h4M9 1h4v4M13 9v4h-4M5 13H1V9"/>
+        </svg>
+      </button>
+      <div class="logo-icon">
+        <span class="lr"></span>
+        <span class="lg"></span>
+        <span class="lb"></span>
+        <span class="lw"></span>
+      </div>
+      <div class="header-text">
+        <h1>Display Calibration Suite</h1>
+        <p class="header-sub">Professional Display Measurement &amp; Profiling Tools</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" onclick="switchApp(0)">
+        <span class="tab-num">01</span>Display Calibrator
+      </button>
+      <button class="tab" onclick="switchApp(1)">
+        <span class="tab-num">02</span>Spectral Analyzer
+      </button>
+      <button class="tab" onclick="switchApp(2)">
+        <span class="tab-num">03</span>Chromatic Data Analyzer
+      </button>
+      <button class="tab" onclick="switchApp(3)">
+        <span class="tab-num">04</span>Calibration Preview
+      </button>
+      <button class="tab" onclick="switchApp(4)">
+        <span class="tab-num">05</span>TI3 · Argyll Profiler
+      </button>
+      <button class="tab" onclick="switchApp(5)">
+        <span class="tab-num">06</span>Color Calculator
+      </button>
+    </nav>
+  </header>
+
+  <main>
+    <div id="app-1" class="app-panel active">
+      <iframe src="display calibrator/index.html" title="Display Calibrator" allowfullscreen></iframe>
+    </div>
+    <div id="app-2" class="app-panel">
+      <iframe src="Spectral analyzer/index.html" title="Spectral Analyzer" allowfullscreen></iframe>
+    </div>
+    <div id="app-3" class="app-panel">
+      <iframe src="Chromatic Data Analyser/index_renamed.html" title="Chromatic Data Analyzer" allowfullscreen></iframe>
+    </div>
+    <div id="app-4" class="app-panel">
+      <iframe src="Calibration Preview/index (58).html" title="Calibration Preview" allowfullscreen></iframe>
+    </div>
+    <div id="app-5" class="app-panel">
+      <iframe src="TI3/index.html" title="TI3 Argyll Display Profiler" allowfullscreen></iframe>
+    </div>
+    <div id="app-6" class="app-panel">
+      <iframe src="Colour Calculator/colour_calculator_v2.html" title="Color Calculator" allowfullscreen></iframe>
+    </div>
+  </main>
+
+  <button class="fs-exit-btn" id="fs-exit-btn" onclick="exitShellFS()">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <path d="M1 1l8 8M9 1l-8 8"/>
+    </svg>
+    Exit Fullscreen
+  </button>
+
+  <script>
+    function switchApp(n) {
+      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === n));
+      document.querySelectorAll('.app-panel').forEach((p, i) => p.classList.toggle('active', i === n));
+      localStorage.setItem('activeApp', n);
+    }
+
+    function enterShellFS() {
+      document.body.classList.add('shell-fs');
+    }
+
+    function exitShellFS() {
+      document.body.classList.remove('shell-fs');
+    }
+
+    function toggleShellFS() {
+      document.body.classList.toggle('shell-fs');
+    }
+
+    document.addEventListener('keydown', e => {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.key === 'f' || e.key === 'F') toggleShellFS();
+      if (e.key === 'Escape') exitShellFS();
+    });
+
+    window.addEventListener('message', e => {
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type === 'shellFS') {
+        if (e.data.on) enterShellFS();
+        else exitShellFS();
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const saved = parseInt(localStorage.getItem('activeApp') || '0');
+      switchApp(saved);
+    });
+  </script>
+</body>
+</html>
