@@ -23,7 +23,8 @@
       --radius: 10px;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: none; }
+::-webkit-scrollbar { display: none; }
 
     html, body {
       height: 100%;
@@ -45,11 +46,11 @@
       background-size: 40px 40px;
     }
 
-    /* ── Scrollbar ── */
+    /* ── Scrollbar ──
     ::-webkit-scrollbar { width: 6px; height: 6px; display: none; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); } */
 
     /* ── Header ── */
     header {
@@ -297,6 +298,12 @@
       <button class="tab" onclick="switchApp(5)">
         <span class="tab-num">06</span>Color Calculator
       </button>
+      <button class="tab" onclick="switchApp(6)">
+        <span class="tab-num">07</span>Gamma Analyzer
+      </button>
+      <button class="tab" onclick="switchApp(7)">
+        <span class="tab-num">08</span>Gamut Scope
+      </button>
     </nav>
   </header>
 
@@ -318,6 +325,12 @@
     </div>
     <div id="app-6" class="app-panel">
       <iframe src="Colour Calculator/colour_calculator_v2.html" title="Color Calculator" allowfullscreen></iframe>
+    </div>
+    <div id="app-7" class="app-panel">
+      <iframe src="Gamma analyzer/gamma_calibrator_v6 (3).html" title="Gamma Analyzer" allowfullscreen></iframe>
+    </div>
+    <div id="app-8" class="app-panel">
+      <iframe src="Gamut Scope/gamut_scope_v2 (4).html" title="Gamut Scope" allowfullscreen></iframe>
     </div>
   </main>
 
