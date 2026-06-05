@@ -357,6 +357,33 @@ body::before {
 .slider-label.lbl-before { left: 10px; color: rgba(255,255,255,0.6); }
 .slider-label.lbl-after  { right: 10px; color: var(--accent); }
 
+/* ── REMOVE IMAGE BUTTON ── */
+.btn-remove-image {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 20;
+  width: 28px; height: 28px;
+  border: 1px solid rgba(255,80,80,0.4);
+  background: rgba(0,0,0,0.65);
+  color: rgba(255,100,100,0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.18s;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+.btn-remove-image:hover {
+  border-color: #ff4444;
+  color: #ff4444;
+  background: rgba(0,0,0,0.85);
+}
+.slider-wrap:hover .btn-remove-image { display: flex; }
+
 /* ── APPLY BUTTON ── */
 .btn-apply {
   border: 1px solid var(--accent);
@@ -534,15 +561,28 @@ body::before {
 }
 .fs-overlay.active { display: flex; }
 
-.fs-top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background: #0a0a0a;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+.fs-top-bar { display: none; }
+
+.fs-close-btn-floating {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 100;
+  width: 36px; height: 36px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.6);
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  opacity: 0;
+  transition: opacity 0.2s, border-color 0.15s, color 0.15s, background 0.15s;
 }
+.fs-canvas-area:hover .fs-close-btn-floating { opacity: 1; }
+.fs-close-btn-floating:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,0,0,0.85); opacity: 1; }
+
 .fs-title {
   font-family: var(--mono);
   font-size: 12px;
@@ -570,6 +610,8 @@ body::before {
   overflow: hidden;
   cursor: ew-resize;
   user-select: none;
+  width: 100%;
+  height: 100%;
 }
 .fs-canvas-area canvas {
   position: absolute;
@@ -717,6 +759,7 @@ body::before {
         </div>
         <div class="slider-label lbl-before">PRZED</div>
         <div class="slider-label lbl-after">PO</div>
+        <button class="btn-remove-image" id="btn-remove-image" title="Usuń obraz" onclick="removeImage()">✕</button>
         <button class="btn-fullscreen" id="btn-fullscreen" title="Pełny ekran" onclick="openFullscreen()">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M1 5V1H5M9 1H13V5M13 9V13H9M5 13H1V9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
@@ -726,11 +769,8 @@ body::before {
 
       <!-- FULLSCREEN OVERLAY -->
       <div class="fs-overlay" id="fs-overlay">
-        <div class="fs-top-bar">
-          <div class="fs-title">PRZED / PO &mdash; TRYB PE&#321;NOEKRANOWY</div>
-          <button class="fs-close" onclick="closeFullscreen()" title="Zamknij (Esc)">&#x2715;</button>
-        </div>
         <div class="fs-canvas-area" id="fs-canvas-area">
+          <button class="fs-close-btn-floating" onclick="closeFullscreen()" title="Zamknij (Esc)">&#x2715;</button>
           <canvas id="fsCvAfter"></canvas>
           <canvas id="fsCvBefore"></canvas>
           <div class="fs-slider-line" id="fs-sline"></div>
@@ -908,11 +948,25 @@ function loadFile(f) {
       btnApply.style.display = 'block';
       hintEl.style.display = 'block';
       document.getElementById('btn-download').style.display = 'block';
+      document.getElementById('btn-remove-image').style.display = 'flex';
       renderPreview();
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(f);
+}
+
+function removeImage() {
+  srcImage = null;
+  fileInp.value = '';
+  uploadZone.style.display = '';
+  sliderWrap.style.display = 'none';
+  btnApply.style.display = 'none';
+  hintEl.style.display = 'none';
+  document.getElementById('btn-download').style.display = 'none';
+  document.getElementById('btn-remove-image').style.display = 'none';
+  // clear canvases
+  [cvBefore, cvAfter].forEach(c => { const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); });
 }
 
 function buildCorrector(p) {

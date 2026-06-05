@@ -187,10 +187,22 @@
     }
 
     .app-panel iframe {
-      width: 100%;
+      width: 60%;
+      max-width: 60%;
+      margin: 0 auto;
       min-height: calc(100vh - 160px);
       border: none;
       display: block;
+    }
+
+    @media (max-width: 1100px) {
+      .app-panel iframe { width: 100%; max-width: 100%; }
+    }
+
+    /* Apps that need the full page width (e.g. False Color Viewer) */
+    .app-panel.app-fullwidth iframe {
+      width: 100%;
+      max-width: 100%;
     }
 
     /* ── Shell fullscreen mode ── */
@@ -198,6 +210,8 @@
     body.shell-fs header { display: none; }
     body.shell-fs .app-panel,
     body.shell-fs .app-panel iframe {
+      width: 100%;
+      max-width: 100%;
       min-height: 100vh;
       height: 100vh;
     }
@@ -293,43 +307,49 @@
         <span class="tab-num">04</span>Calibration Preview
       </button>
       <button class="tab" onclick="switchApp(4)">
-        <span class="tab-num">05</span>TI3 · Argyll Profiler
+        <span class="tab-num">05</span>False Color Viewer
       </button>
       <button class="tab" onclick="switchApp(5)">
-        <span class="tab-num">06</span>Color Calculator
+        <span class="tab-num">06</span>TI3 · Argyll Profiler
       </button>
       <button class="tab" onclick="switchApp(6)">
-        <span class="tab-num">07</span>Gamma Analyzer
+        <span class="tab-num">07</span>Color Calculator
       </button>
       <button class="tab" onclick="switchApp(7)">
-        <span class="tab-num">08</span>Gamut Scope
+        <span class="tab-num">08</span>Gamma Analyzer
+      </button>
+      <button class="tab" onclick="switchApp(8)">
+        <span class="tab-num">09</span>Gamut Scope
       </button>
     </nav>
   </header>
 
   <main>
     <div id="app-1" class="app-panel active">
-      <iframe src="display calibrator/index.html" title="Display Calibrator" allowfullscreen></iframe>
+      <iframe src="display calibrator/index (73).html" title="Display Calibrator" allowfullscreen></iframe>
     </div>
     <div id="app-2" class="app-panel">
-      <iframe src="Spectral analyzer/index.html" title="Spectral Analyzer" allowfullscreen></iframe>
+      <iframe src="Spectral analyzer/index (67).html" title="Spectral Analyzer" allowfullscreen></iframe>
     </div>
     <div id="app-3" class="app-panel">
-      <iframe src="Chromatic Data Analyser/index_renamed.html" title="Chromatic Data Analyzer" allowfullscreen></iframe>
+      <iframe src="Chromatic Data Analyser/index_renamed (2).html" title="Chromatic Data Analyzer" allowfullscreen></iframe>
     </div>
     <div id="app-4" class="app-panel">
-      <iframe src="Calibration Preview/index (58).html" title="Calibration Preview" allowfullscreen></iframe>
+      <iframe src="Calibration Preview/index.html" title="Calibration Preview" allowfullscreen></iframe>
     </div>
-    <div id="app-5" class="app-panel">
-      <iframe src="TI3/index.html" title="TI3 Argyll Display Profiler" allowfullscreen></iframe>
+    <div id="app-5" class="app-panel app-fullwidth">
+      <iframe src="False Color Viewer/False Color Viever.html" title="False Color Viewer" allowfullscreen></iframe>
     </div>
     <div id="app-6" class="app-panel">
-      <iframe src="Colour Calculator/colour_calculator_v2.html" title="Color Calculator" allowfullscreen></iframe>
+      <iframe src="TI3/ti3gen_v6.html" title="TI3 Argyll Display Profiler" allowfullscreen></iframe>
     </div>
     <div id="app-7" class="app-panel">
-      <iframe src="Gamma analyzer/gamma_calibrator_v6 (3).html" title="Gamma Analyzer" allowfullscreen></iframe>
+      <iframe src="Colour Calculator/colour_calculator_v2.html" title="Color Calculator" allowfullscreen></iframe>
     </div>
     <div id="app-8" class="app-panel">
+      <iframe src="Gamma analyzer/gamma_calibrator_v7.html" title="Gamma Analyzer" allowfullscreen></iframe>
+    </div>
+    <div id="app-9" class="app-panel">
       <iframe src="Gamut Scope/gamut_scope_v2 (4).html" title="Gamut Scope" allowfullscreen></iframe>
     </div>
   </main>
