@@ -1938,7 +1938,9 @@ function xyYtoRGBgain(x, y, Y) {
 }
 
 function renderRGBTracking() {
-  const validIndices = LEVELS.map((_, i) => i);
+  // Pomijamy poziom 0 (czerń) — chromatyczność czerni jest nieokreślona i zaszumiona.
+  // Używamy wszystkich pozostałych poziomów wybranej skali (8, 10 lub 16).
+  const validIndices = LEVELS.map((_, i) => i).filter(i => i > 0);
   const labels = validIndices.map(i => LEVELS[i]);
 
   // Oblicz gain dla każdego poziomu kanału W
