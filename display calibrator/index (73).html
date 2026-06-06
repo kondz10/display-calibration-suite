@@ -787,6 +787,24 @@
 </head>
 <body>
 
+<!-- ===== SKIP MODAL: ROZDZIELCZOŚĆ ===== -->
+<div id="skipResModal" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(8,8,8,0.88);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:14px;padding:40px 36px;width:min(460px,92vw);">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:#555;text-transform:uppercase;margin-bottom:8px;">SZYBKI START</div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:600;color:#e0e0e0;margin-bottom:28px;">Wybierz rozdzielczość ekranu</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:28px;">
+      <div class="card" id="skipResCard1280" onclick="skipSelectRes(1280,720)"><div class="card-main">HD</div><div class="card-sub">1280 × 720</div></div>
+      <div class="card" id="skipResCard1920" onclick="skipSelectRes(1920,1080)"><div class="card-main">FHD</div><div class="card-sub">1920 × 1080</div></div>
+      <div class="card" id="skipResCard2560" onclick="skipSelectRes(2560,1440)"><div class="card-main">QHD</div><div class="card-sub">2560 × 1440</div></div>
+      <div class="card" id="skipResCard3840" onclick="skipSelectRes(3840,2160)"><div class="card-main">4K</div><div class="card-sub">3840 × 2160</div></div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="document.getElementById('skipResModal').style.display='none'" style="flex:0 0 auto;background:transparent;border:1px solid #2a2a2a;color:#555;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;padding:12px 20px;border-radius:8px;cursor:pointer;text-transform:uppercase;">WRÓĆ</button>
+      <button id="skipResConfirm" onclick="skipResConfirm()" disabled style="flex:1;background:transparent;border:1px solid #8b15ba;color:#8b15ba;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:4px;padding:12px 20px;border-radius:8px;cursor:pointer;text-transform:uppercase;transition:all 0.18s;opacity:0.4;">DALEJ</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== INSTRUCTION OVERLAY ===== -->
 <div class="instr-overlay" id="instrOverlay">
   <div class="instr-inner">
@@ -805,6 +823,11 @@
         SCALE: 8 · 16 STEPS
       </div>
     </header>
+
+    <!-- SKIP BAR -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:24px;margin-top:-8px;">
+      <button onclick="skipInstructions()" style="background:rgba(139,21,186,0.12);border:1px solid rgba(139,21,186,0.5);color:#c06ae0;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:3px;padding:11px 24px;border-radius:8px;cursor:pointer;text-transform:uppercase;" onmouseover="this.style.background='rgba(139,21,186,0.22)'" onmouseout="this.style.background='rgba(139,21,186,0.12)'">POMIŃ INSTRUKCJE &rarr;</button>
+    </div>
 
     <!-- PAGE DOTS -->
     <div class="page-indicator">
@@ -1026,14 +1049,14 @@
       <div class="mode-num">01</div>
       <div>
         <div class="mode-title">GRADIENT STEPS</div>
-        <div class="mode-desc">Podział ekranu na 8 lub 16 bloków od czerni do bieli — osobno R, G, B, W.</div>
+        <div class="mode-desc">Podział ekranu na 8, 10, 16 lub 32 bloki od czerni do bieli — osobno R, G, B, W.</div>
       </div>
     </div>
     <div class="mode-card" id="modeCard2" onclick="selectMode(2)">
       <div class="mode-num">02</div>
       <div>
         <div class="mode-title">SOLID LEVELS</div>
-        <div class="mode-desc">Pełnoekranowe jednolite pola — 8 lub 16 poziomów wybranego kanału.</div>
+        <div class="mode-desc">Pełnoekranowe jednolite pola — 8, 10, 16 lub 32 poziomy wybranego kanału.</div>
       </div>
     </div>
     <div class="mode-card" id="modeCard3" onclick="selectMode(3)">
@@ -1076,14 +1099,22 @@
   <!-- 02 SKALA — tylko dla trybu 1 i 2 -->
   <div id="scaleSection">
     <div class="section-label">02 / Skala kroków</div>
-    <div class="card-grid cols2" style="margin-bottom:36px;">
+    <div class="card-grid cols4" style="margin-bottom:36px;">
       <div class="card active" id="scaleCard8" onclick="selectScale(8)">
         <div class="card-main">8</div>
         <div class="card-sub">0 · 36 · 73 · 109 · 146 · 182 · 219 · 255</div>
       </div>
+      <div class="card" id="scaleCard10" onclick="selectScale(10)">
+        <div class="card-main">10</div>
+        <div class="card-sub">0 · 28 · 57 · 85 · 113 · 142 · 170 · 198 · 227 · 255</div>
+      </div>
       <div class="card" id="scaleCard16" onclick="selectScale(16)">
         <div class="card-main">16</div>
         <div class="card-sub">0 · 17 · 34 · 51 · … · 204 · 221 · 238 · 255</div>
+      </div>
+      <div class="card" id="scaleCard32" onclick="selectScale(32)">
+        <div class="card-main">32</div>
+        <div class="card-sub">0 · 8 · 16 · 24 · … · 232 · 240 · 248 · 255</div>
       </div>
     </div>
   </div>
@@ -1103,7 +1134,7 @@
   <div id="gridSection" class="hidden">
     <div class="section-label">04 / Siatka pomiarowa</div>
     <div class="card-grid cols2" style="margin-bottom:36px;">
-      <div class="card" id="gridCardOff" onclick="selectGrid(false)">
+      <div class="card active" id="gridCardOff" onclick="selectGrid(false)">
         <div class="card-main" style="display:flex;align-items:center;justify-content:center;gap:10px;">
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
             <rect x="1" y="1" width="24" height="24" rx="2" stroke="#555" stroke-width="1.5"/>
@@ -1111,7 +1142,7 @@
         </div>
         <div class="card-sub">WYŁĄCZONA</div>
       </div>
-      <div class="card active" id="gridCardOn" onclick="selectGrid(true)">
+      <div class="card" id="gridCardOn" onclick="selectGrid(true)">
         <div class="card-main" style="display:flex;align-items:center;justify-content:center;gap:10px;">
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
             <rect x="1" y="1" width="24" height="24" rx="2" stroke="#8b15ba" stroke-width="1.5"/>
@@ -1183,7 +1214,7 @@
     <div class="fs-hud-label" id="gradLabel">R</div>
     <div class="fs-hud-info" id="gradInfo">KANAŁ 1/4 · SKALA 8</div>
   </div>
-  <div class="fs-hint" id="gradHint">KLIKNIJ ABY PRZEJŚĆ DALEJ</div>
+  <div class="fs-hint" id="gradHint">KLIKNIJ ABY PRZEJŚĆ DALEJ · ESC ABY ZAKOŃCZYĆ</div>
   <div class="fs-done" id="gradDone">
     <div class="done-bars">
       <div class="done-bar r"></div>
@@ -1203,7 +1234,7 @@
     <div class="fs-hud-label" id="solidLabel">R</div>
     <div class="fs-hud-info" id="solidInfo">POZIOM 1/8</div>
   </div>
-  <div class="fs-hint" id="solidHint">KLIKNIJ ABY PRZEJŚĆ DALEJ</div>
+  <div class="fs-hint" id="solidHint">KLIKNIJ ABY PRZEJŚĆ DALEJ · ESC ABY ZAKOŃCZYĆ</div>
   <div class="fs-dots" id="solidDots"></div>
   <div class="fs-done" id="solidDone">
     <div class="done-bars"><div class="done-bar single" id="solidDoneBar"></div></div>
@@ -1228,7 +1259,7 @@
     <div class="fs-hud-label" id="aplLabel" style="color:#fff;">APL 2%</div>
     <div class="fs-hud-info" id="aplInfo" style="color:rgba(255,255,255,0.5);">POZIOM 1/9</div>
   </div>
-  <div class="fs-hint" id="aplHint" style="color:rgba(255,255,255,0.4);">KLIKNIJ ABY PRZEJŚĆ DALEJ</div>
+  <div class="fs-hint" id="aplHint" style="color:rgba(255,255,255,0.4);">KLIKNIJ ABY PRZEJŚĆ DALEJ · ESC ABY ZAKOŃCZYĆ</div>
   <div class="fs-dots" id="aplDots"></div>
   <div class="fs-done" id="aplDone">
     <div class="done-bars"><div class="done-bar single"></div></div>
@@ -1345,6 +1376,48 @@
     ov.style.display = '';
     ov.scrollTop = 0;
   }
+
+  let skipSelectedResW = 0;
+  let skipSelectedResH = 0;
+
+  function skipInstructions() {
+    skipSelectedResW = 0;
+    skipSelectedResH = 0;
+    // Reset selection state in modal
+    ['skipResCard1280','skipResCard1920','skipResCard2560','skipResCard3840'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+    const confirmBtn = document.getElementById('skipResConfirm');
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.style.opacity = '0.4'; }
+    // Show modal
+    const modal = document.getElementById('skipResModal');
+    modal.style.display = 'flex';
+  }
+
+  function skipSelectRes(w, h) {
+    skipSelectedResW = w;
+    skipSelectedResH = h;
+    ['skipResCard1280','skipResCard1920','skipResCard2560','skipResCard3840'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+    const cardMap = {1280:'skipResCard1280', 1920:'skipResCard1920', 2560:'skipResCard2560', 3840:'skipResCard3840'};
+    const active = document.getElementById(cardMap[w]);
+    if (active) active.classList.add('active');
+    const confirmBtn = document.getElementById('skipResConfirm');
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.style.opacity = '1'; }
+  }
+
+  function skipResConfirm() {
+    if (!skipSelectedResW) return;
+    // Apply chosen resolution
+    selectedResW = skipSelectedResW;
+    selectedResH = skipSelectedResH;
+    // Hide modal and instruction overlay
+    document.getElementById('skipResModal').style.display = 'none';
+    document.getElementById('instrOverlay').style.display = 'none';
+  }
 </script>
 
 <script>
@@ -1396,7 +1469,10 @@
   function selectScale(s) {
     scale = s;
     document.getElementById('scaleCard8').classList.toggle('active', s===8);
+    const c10 = document.getElementById('scaleCard10');
+    if (c10) c10.classList.toggle('active', s===10);
     document.getElementById('scaleCard16').classList.toggle('active', s===16);
+    document.getElementById('scaleCard32').classList.toggle('active', s===32);
     updateGridLabel();
     updateBtn();
   }
@@ -1498,14 +1574,23 @@
     document.getElementById('gradHint').style.display = '';
     ov.classList.add('active');
     ov.onclick = onGradClick;
+    document.addEventListener('keydown', onGradKey);
     renderGrad();
     gradTimer = fadeHud(3000,'gradHud','gradHint');
   }
 
+  function onGradKey(e) { if (e.key === 'Escape') closeGradient(); }
+
+  function closeGradient() {
+    clearTimeout(gradTimer);
+    document.getElementById('gradOverlay').classList.remove('active');
+    document.removeEventListener('keydown', onGradKey);
+    window.parent.postMessage({type:'shellFS', on:false}, '*');
+  }
+
   function onGradClick() {
     if (document.getElementById('gradDone').classList.contains('active')) {
-      document.getElementById('gradOverlay').classList.remove('active');
-      window.parent.postMessage({type:'shellFS', on:false}, '*');
+      closeGradient();
       return;
     }
     gradStep++;
@@ -1585,9 +1670,19 @@
     document.getElementById('solidDots').style.display = '';
     ov.classList.add('active');
     ov.onclick = onSolidClick;
+    document.addEventListener('keydown', onSolidKey);
     buildDots();
     renderSolid();
     solidTimer = fadeHud(3000,'solidHud','solidHint','solidDots');
+  }
+
+  function onSolidKey(e) { if (e.key === 'Escape') closeSolid(); }
+
+  function closeSolid() {
+    clearTimeout(solidTimer);
+    document.getElementById('solidOverlay').classList.remove('active');
+    document.removeEventListener('keydown', onSolidKey);
+    window.parent.postMessage({type:'shellFS', on:false}, '*');
   }
 
   function buildDots() {
@@ -1611,8 +1706,7 @@
 
   function onSolidClick() {
     if (document.getElementById('solidDone').classList.contains('active')) {
-      document.getElementById('solidOverlay').classList.remove('active');
-      window.parent.postMessage({type:'shellFS', on:false}, '*');
+      closeSolid();
       return;
     }
     solidStep++;
@@ -1780,9 +1874,19 @@
     document.getElementById('aplDots').style.display = '';
     ov.classList.add('active');
     ov.onclick = onAPLClick;
+    document.addEventListener('keydown', onAPLKey);
     buildAPLDots();
     renderAPL();
     aplTimer = fadeHud(2000,'aplHud','aplHint','aplDots');
+  }
+
+  function onAPLKey(e) { if (e.key === 'Escape') closeAPL(); }
+
+  function closeAPL() {
+    clearTimeout(aplTimer);
+    document.getElementById('aplOverlay').classList.remove('active');
+    document.removeEventListener('keydown', onAPLKey);
+    window.parent.postMessage({type:'shellFS', on:false}, '*');
   }
 
   function buildAPLDots() {
@@ -1809,8 +1913,7 @@
 
   function onAPLClick() {
     if (document.getElementById('aplDone').classList.contains('active')) {
-      document.getElementById('aplOverlay').classList.remove('active');
-      window.parent.postMessage({type:'shellFS', on:false}, '*');
+      closeAPL();
       return;
     }
     aplStep++;
@@ -2129,7 +2232,7 @@
   let wzlShape = 'square'; // 'square' | 'circle'
   let wzlFill = 2; // 2 | 5 | 10 (%)
 
-  let solidGrid = true; // siatka domyślnie włączona
+  let solidGrid = false; // siatka domyślnie wyłączona
 
   function selectGrid(on) {
     solidGrid = on;

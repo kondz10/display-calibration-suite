@@ -231,13 +231,14 @@ body::before {
 }
 .paste-area {
   width: 100%;
-  min-height: 90px;
+  min-height: 56px;
+  height: 56px;
   background: var(--surface);
   border: 1px solid var(--border2);
   border-radius: var(--radius);
-  padding: 12px;
+  padding: 10px 12px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text);
   resize: vertical;
   transition: border-color .15s;
@@ -247,6 +248,27 @@ body::before {
   border-color: var(--accent);
 }
 .paste-area::placeholder { color: var(--text3); }
+/* Precision selector */
+.prec-btn {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  padding: 8px 20px;
+  background: var(--surface);
+  color: var(--text2);
+  border: 1px solid var(--border2);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-right: none;
+}
+.prec-btn:last-child { border-right: 1px solid var(--border2); }
+.prec-btn:hover { color: var(--text); border-color: var(--accent); }
+.prec-btn.prec-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .paste-hint {
   font-family: var(--mono);
   font-size: 11px;
@@ -255,7 +277,7 @@ body::before {
   letter-spacing: 1px;
 }
 
-/* Grid of input cards */
+/* Grid of input cards — always 4 columns */
 .grid8 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -264,6 +286,23 @@ body::before {
 }
 @media (max-width: 700px) {
   .grid8 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* 16-point mode: tighter cards */
+.grid8.grid16 .point-card {
+  padding: 10px 9px;
+}
+.grid8.grid16 .point-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 7px;
+}
+.grid8.grid16 .inp-group {
+  margin-bottom: 3px;
+}
+.grid8.grid16 .inp-group input {
+  padding: 3px 6px;
+  font-size: 11px;
 }
 
 .point-card {
@@ -741,11 +780,14 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
   padding: 16px;
   margin-bottom: 20px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .cc-cie-canvas {
   display: block;
   width: 100%;
-  max-width: 600px;
+  max-width: 960px;
   margin: 0 auto;
 }
 .cc-legend-grid {
@@ -753,6 +795,8 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 4px 8px;
   margin-top: 12px;
+  width: 100%;
+  max-width: 960px;
 }
 .cc-leg-item {
   display: flex;
@@ -833,17 +877,27 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
 
   <!-- INPUT VIEW -->
   <div id="view-input">
-    <div class="info-box">
-      Podaj dla każdego kanału (<strong>R, G, B</strong>, opcjonalnie <strong>W</strong>) po 8 punktów pomiarowych.<br>
+    <div class="info-box" id="infoBox">
+      Podaj dla każdego kanału (<strong>R, G, B</strong>, opcjonalnie <strong>W</strong>) po <strong id="infoPointCount">8</strong> punktów pomiarowych.<br>
       Dla każdego punktu: <strong>x</strong>, <strong>y</strong> — chromatyczność CIE 1931, <strong>Y</strong> — luminancja [cd/m²].<br>
-      Poziomy sygnału RGB: <strong>0, 36, 73, 109, 146, 182, 219, 255</strong> (255 = 100%).
+      Poziomy sygnału RGB: <strong id="infoLevels">0, 36, 73, 109, 146, 182, 219, 255</strong> (255 = 100%).
+    </div>
+
+    <!-- PRECISION SELECTOR -->
+    <div class="paste-section" style="margin-bottom:12px">
+      <div class="paste-label">Dokładność pomiarów</div>
+      <div style="display:flex;gap:0;margin-top:6px">
+        <button id="btn8"  class="prec-btn prec-active" onclick="setPrecision(8)">8 pomiarów</button>
+        <button id="btn16" class="prec-btn"             onclick="setPrecision(16)">16 pomiarów</button>
+      </div>
+      <div class="paste-hint" id="precHint">8 punktów: poziomy 0 · 36 · 73 · 109 · 146 · 182 · 219 · 255</div>
     </div>
 
     <!-- PASTE SECTION -->
     <div class="paste-section">
       <div class="paste-label">Wklej dane</div>
       <textarea class="paste-area" id="pasteInput" placeholder="Wklej dane jako wiersze: x  y  Y (oddzielone spacją, tabulatorem lub przecinkiem)&#10;Przykład:&#10;0.3127  0.3290  0.01&#10;0.3135  0.3295  2.50&#10;0.3140  0.3298  10.2&#10;..."></textarea>
-      <div class="paste-hint">→ 8 wierszy dla aktualnie wybranego kanału. Separatory: spacja, tab, przecinek lub średnik.</div>
+      <div class="paste-hint" id="pasteHint">→ 8 wierszy dla aktualnie wybranego kanału. Separatory: spacja, tab, przecinek lub średnik.</div>
       <div style="margin-top:8px;display:flex;gap:8px">
         <button class="secondary" onclick="parsePaste()">Importuj wklejone dane →</button>
         <button class="secondary" onclick="clearPaste()">Wyczyść pole</button>
@@ -1007,20 +1061,18 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
     </div>
 
     <div class="section-label">Tracking punktu bieli</div>
-    <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
-      <div class="chart-wrap" style="flex:1;margin-bottom:0;border:none;border-right:1px solid var(--border);border-radius:0">
-        <div class="chart-title">Δx i Δy od D65 w funkcji poziomu sygnału</div>
-        <div class="legend" style="margin-bottom:12px">
-          <div class="leg-item"><div class="leg-line" style="background:var(--accent)"></div><span>Δx od D65</span></div>
-          <div class="leg-item"><div class="leg-line" style="background:var(--green)"></div><span>Δy od D65</span></div>
-          <div class="leg-item"><div class="leg-line" style="background:rgba(255,255,255,0.25);border-top:1px dashed rgba(255,255,255,0.25);height:0;margin-top:5px"></div><span style="margin-left:2px">y=0 (D65)</span></div>
-        </div>
-        <div style="height:260px"><canvas id="gsTrackChart"></canvas></div>
+    <div class="chart-wrap">
+      <div class="chart-title">Δx i Δy od D65 w funkcji poziomu sygnału</div>
+      <div class="legend" style="margin-bottom:12px">
+        <div class="leg-item"><div class="leg-line" style="background:var(--accent)"></div><span>Δx od D65</span></div>
+        <div class="leg-item"><div class="leg-line" style="background:var(--green)"></div><span>Δy od D65</span></div>
+        <div class="leg-item"><div class="leg-line" style="background:rgba(255,255,255,0.25);border-top:1px dashed rgba(255,255,255,0.25);height:0;margin-top:5px"></div><span style="margin-left:2px">y=0 (D65)</span></div>
       </div>
-      <div class="chart-wrap" style="flex:1;margin-bottom:0;border:none;border-radius:0">
-        <div class="chart-title">WB ΔE2000 — dryft względem punktu 100% kanału W</div>
-        <div style="height:260px;margin-top:38px"><canvas id="gsDeChart"></canvas></div>
-      </div>
+      <div style="height:300px"><canvas id="gsTrackChart"></canvas></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">WB ΔE2000 — dryft względem punktu 100% kanału W</div>
+      <div style="height:300px"><canvas id="gsDeChart"></canvas></div>
     </div>
 
     <div class="section-label">Podsumowanie</div>
@@ -1046,9 +1098,9 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
     </div>
 
     <!-- APL paste section -->
-    <div class="paste-section">
+    <div class="paste-section" style="max-width:480px">
       <div class="paste-label">Wklej dane</div>
-      <textarea class="paste-area" id="aplPasteInput" placeholder="Wklej dane luminancji — każdy wiersz to jedna wartość [cd/m²]&#10;Jeśli wklejasz dane w formacie x  y  Y — kolumna Y zostanie odczytana automatycznie.&#10;Przykład (same wartości):&#10;1060&#10;1060&#10;1058&#10;...&#10;Przykład (z x y Y):&#10;0.3127  0.3290  1060&#10;0.3128  0.3291  1058&#10;..."></textarea>
+      <textarea class="paste-area" id="aplPasteInput" placeholder="9 wierszy luminancji [cd/m²], jeden na wiersz. Format x y Y też działa — czyta kolumnę Y."></textarea>
       <div class="paste-hint">→ 9 wierszy dla APL 2%–100%. Separatory: spacja, tab, przecinek lub średnik. Kolumny x i y są ignorowane.</div>
       <div style="margin-top:8px;display:flex;gap:8px">
         <button class="secondary" onclick="aplParsePaste()">Importuj wklejone dane →</button>
@@ -1071,9 +1123,9 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
       <div class="section-label">Jasność matrycy</div>
 
       <!-- Device label top right like the reference -->
-      <div class="chart-wrap" style="position:relative">
+      <div class="chart-wrap" style="position:relative;max-width:640px;margin-left:auto;margin-right:auto">
         <div id="aplChartLabel" style="position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:12px;color:var(--orange);text-align:right;line-height:1.5;pointer-events:none;z-index:2;"></div>
-        <div style="height:320px"><canvas id="aplChart"></canvas></div>
+        <div style="height:360px"><canvas id="aplChart"></canvas></div>
       </div>
 
       <!-- Metrics row -->
@@ -1093,9 +1145,9 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
     <div class="section-label">Dane kolorymetryczne — 24 pola</div>
 
     <!-- CC paste section -->
-    <div class="paste-section">
+    <div class="paste-section" style="max-width:480px">
       <div class="paste-label">Wklej dane</div>
-      <textarea class="paste-area" id="ccPasteInput" placeholder="Wklej dane chromatyczności — każdy wiersz to jedno pole (x  y lub x  y  Y).&#10;Luminancja Y jest ignorowana jeśli obecna. Wymagane 24 wiersze.&#10;Przykład (x y):&#10;0.4002  0.3504&#10;0.3773  0.3446&#10;...&#10;Przykład (x y Y):&#10;0.4002  0.3504  12.5&#10;0.3773  0.3446  35.2&#10;..."></textarea>
+      <textarea class="paste-area" id="ccPasteInput" placeholder="24 wiersze chromatyczności (x y lub x y Y). Kolumna Y ignorowana."></textarea>
       <div class="paste-hint">→ 24 wiersze dla 24 pól ColorCheckera. Separatory: spacja, tab, przecinek lub średnik. Kolumna Y jest ignorowana.</div>
       <div style="margin-top:8px;display:flex;gap:8px">
         <button class="secondary" onclick="ccParsePaste()">Importuj wklejone dane →</button>
@@ -1114,8 +1166,8 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
     <!-- CIE diagram -->
     <div class="section-label">Diagram CIE 1931 xy</div>
     <div class="cc-cie-wrap">
-      <div class="chart-title">Przestrzeń barw CIE 1931 — pomiary vs referencja Macbeth ColorChecker</div>
-      <canvas id="ccCanvas" class="cc-cie-canvas" width="600" height="540"></canvas>
+      <div class="chart-title" style="width:100%;max-width:960px">Przestrzeń barw CIE 1931 — pomiary vs referencja Macbeth ColorChecker</div>
+      <canvas id="ccCanvas" class="cc-cie-canvas" width="1200" height="1080"></canvas>
       <div class="cc-legend-grid" id="ccLegend"></div>
     </div>
 
@@ -1125,8 +1177,15 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
   </div>
 
 <script>
-const LEVELS = ['0','36','73','109','146','182','219','255'];
-const LEVEL_PCT = [0,14.1,28.6,42.7,57.3,71.4,85.9,100];
+const LEVELS_8  = ['0','36','73','109','146','182','219','255'];
+const LEVELS_16 = ['0','17','34','51','68','85','102','119','136','153','170','187','204','221','238','255'];
+const LEVEL_PCT_8  = [0, 6.7, 13.3, 20.0, 26.7, 33.3, 40.0, 46.7, 53.3, 60.0, 66.7, 73.3, 80.0, 86.7, 93.3, 100];
+const LEVEL_PCT_16 = [0, 6.7, 13.3, 20.0, 26.7, 33.3, 40.0, 46.7, 53.3, 60.0, 66.7, 73.3, 80.0, 86.7, 93.3, 100];
+
+let precision = 8;
+let LEVELS    = LEVELS_8.slice();
+let LEVEL_PCT = [0,14.1,28.6,42.7,57.3,71.4,85.9,100];
+
 const CHANNELS = ['R','G','B','W'];
 const D65 = { x: 0.3127, y: 0.3290 };
 
@@ -1146,7 +1205,7 @@ const STORAGE_KEY = 'wba_data_v1';
 
 function saveToStorage() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ data, precision }));
     const badge = document.getElementById('storageBadge');
     if (badge) badge.style.display = 'flex';
   } catch(e) {}
@@ -1157,9 +1216,22 @@ function loadFromStorage() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     const saved = JSON.parse(raw);
+    // Support old format (just data object) and new format ({data, precision})
+    const savedData      = saved.data || saved;
+    const savedPrecision = saved.precision || 8;
+
+    if (savedPrecision !== 8 && savedPrecision !== 16) return false;
+
+    // Apply precision first (silently, no confirm)
+    precision = savedPrecision;
+    LEVELS    = savedPrecision === 16 ? LEVELS_16.slice() : LEVELS_8.slice();
+    LEVEL_PCT = savedPrecision === 16
+      ? [0,6.7,13.3,20.0,26.7,33.3,40.0,46.7,53.3,60.0,66.7,73.3,80.0,86.7,93.3,100]
+      : [0,14.1,28.6,42.7,57.3,71.4,85.9,100];
+
     CHANNELS.forEach(ch => {
-      if (saved[ch] && Array.isArray(saved[ch]) && saved[ch].length === LEVELS.length) {
-        data[ch] = saved[ch];
+      if (savedData[ch] && Array.isArray(savedData[ch]) && savedData[ch].length === LEVELS.length) {
+        data[ch] = savedData[ch];
       }
     });
     return true;
@@ -1342,7 +1414,7 @@ function renderInputs() {
   const container = document.getElementById('chInputs');
   container.innerHTML = '';
   const grid = document.createElement('div');
-  grid.className = 'grid8';
+  grid.className = 'grid8' + (precision === 16 ? ' grid16' : '');
   LEVELS.forEach((lv, i) => {
     const d = data[ch][i];
     const hasDat = d.x !== '' || d.y !== '' || d.Y !== '';
@@ -1374,6 +1446,38 @@ function saveVal(ch, i, field, v) {
   saveToStorage();
 }
 
+// ─── Precision selector ───────────────────────────────────────────────────────
+
+function setPrecision(n) {
+  if (precision === n) return;
+
+  const hasAny = CHANNELS.some(ch => data[ch] && data[ch].some(p => p.x !== '' || p.y !== '' || p.Y !== ''));
+  if (hasAny) {
+    if (!confirm(`Zmiana dokładności na ${n} pomiarów wyczyści wszystkie wpisane dane. Kontynuować?`)) return;
+  }
+
+  precision = n;
+  LEVELS    = n === 16 ? LEVELS_16.slice() : LEVELS_8.slice();
+  LEVEL_PCT = n === 16
+    ? [0,6.7,13.3,20.0,26.7,33.3,40.0,46.7,53.3,60.0,66.7,73.3,80.0,86.7,93.3,100]
+    : [0,14.1,28.6,42.7,57.3,71.4,85.9,100];
+
+  CHANNELS.forEach(ch => { data[ch] = LEVELS.map(() => ({x:'',y:'',Y:''})); });
+
+  document.getElementById('btn8').classList.toggle('prec-active', n === 8);
+  document.getElementById('btn16').classList.toggle('prec-active', n === 16);
+
+  const hints8  = '8 punktów: poziomy 0 · 36 · 73 · 109 · 146 · 182 · 219 · 255';
+  const hints16 = '16 punktów: poziomy 0 · 17 · 34 · 51 · 68 · 85 · 102 · 119 · 136 · 153 · 170 · 187 · 204 · 221 · 238 · 255';
+  document.getElementById('precHint').textContent      = n === 16 ? hints16 : hints8;
+  document.getElementById('pasteHint').textContent     = `→ ${n} wierszy dla aktualnie wybranego kanału. Separatory: spacja, tab, przecinek lub średnik.`;
+  document.getElementById('infoPointCount').textContent = n;
+  document.getElementById('infoLevels').textContent    = LEVELS.join(', ');
+
+  saveToStorage();
+  renderInputs();
+}
+
 // ─── Paste import ─────────────────────────────────────────────────────────────
 
 function parsePaste() {
@@ -1399,12 +1503,13 @@ function parsePaste() {
     return;
   }
 
-  if (rows.length > 8) {
-    alert(`Znaleziono ${rows.length} wierszy, zostanie użytych pierwszych 8.`);
+  const n = LEVELS.length;
+  if (rows.length > n) {
+    alert(`Znaleziono ${rows.length} wierszy, zostanie użytych pierwszych ${n}.`);
   }
 
   const ch = currentCh;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < n; i++) {
     if (rows[i]) {
       data[ch][i] = { x: rows[i].x.toString(), y: rows[i].y.toString(), Y: rows[i].Y.toString() };
     } else {
@@ -2228,52 +2333,56 @@ function clearAll() {
 }
 
 function loadDemo() {
-  // Demo with clearly different chromaticities to demonstrate proper chart rendering
-  const demo = {
+  // Demo data sets for both precisions
+  const demo8 = {
     R: [
-      [0.580, 0.340, 0.02], // R channel - clearly warm/red
-      [0.572, 0.338, 1.2],
-      [0.568, 0.336, 4.8],
-      [0.562, 0.334, 10.5],
-      [0.558, 0.333, 18.2],
-      [0.555, 0.332, 28.4],
-      [0.550, 0.331, 62.0],
-      [0.545, 0.330, 110.0]
+      [0.580, 0.340, 0.02],[0.572, 0.338, 1.2],[0.568, 0.336, 4.8],[0.562, 0.334, 10.5],
+      [0.558, 0.333, 18.2],[0.555, 0.332, 28.4],[0.550, 0.331, 62.0],[0.545, 0.330, 110.0]
     ],
     G: [
-      [0.280, 0.590, 0.02], // G channel - clearly green
-      [0.282, 0.588, 1.8],
-      [0.284, 0.585, 7.2],
-      [0.285, 0.583, 15.8],
-      [0.286, 0.581, 27.5],
-      [0.287, 0.580, 43.0],
-      [0.288, 0.578, 96.0],
-      [0.290, 0.576, 172.0]
+      [0.280, 0.590, 0.02],[0.282, 0.588, 1.8],[0.284, 0.585, 7.2],[0.285, 0.583, 15.8],
+      [0.286, 0.581, 27.5],[0.287, 0.580, 43.0],[0.288, 0.578, 96.0],[0.290, 0.576, 172.0]
     ],
     B: [
-      [0.148, 0.065, 0.01], // B channel - clearly blue
-      [0.150, 0.068, 0.6],
-      [0.152, 0.070, 2.5],
-      [0.154, 0.072, 5.5],
-      [0.155, 0.073, 9.8],
-      [0.156, 0.074, 15.3],
-      [0.158, 0.076, 34.0],
-      [0.160, 0.078, 61.0]
+      [0.148, 0.065, 0.01],[0.150, 0.068, 0.6],[0.152, 0.070, 2.5],[0.154, 0.072, 5.5],
+      [0.155, 0.073, 9.8],[0.156, 0.074, 15.3],[0.158, 0.076, 34.0],[0.160, 0.078, 61.0]
     ],
     W: [
-      [0.3130, 0.3292, 0.05],
-      [0.3128, 0.3291, 4.5],
-      [0.3126, 0.3290, 18.0],
-      [0.3125, 0.3289, 40.0],
-      [0.3127, 0.3290, 71.0],
-      [0.3128, 0.3291, 111.0],
-      [0.3130, 0.3292, 250.0],
-      [0.3133, 0.3294, 450.0]
+      [0.3130,0.3292,0.05],[0.3128,0.3291,4.5],[0.3126,0.3290,18.0],[0.3125,0.3289,40.0],
+      [0.3127,0.3290,71.0],[0.3128,0.3291,111.0],[0.3130,0.3292,250.0],[0.3133,0.3294,450.0]
+    ]
+  };
+  const demo16 = {
+    R: [
+      [0.580,0.340,0.01],[0.578,0.339,0.3],[0.575,0.338,0.8],[0.572,0.337,1.8],
+      [0.570,0.336,3.2],[0.568,0.335,5.1],[0.566,0.334,7.6],[0.564,0.333,10.8],
+      [0.562,0.332,14.5],[0.560,0.332,19.0],[0.558,0.331,24.5],[0.556,0.331,32.0],
+      [0.553,0.330,46.0],[0.551,0.330,64.0],[0.548,0.329,88.0],[0.545,0.329,110.0]
+    ],
+    G: [
+      [0.280,0.590,0.01],[0.281,0.589,0.5],[0.282,0.588,1.2],[0.282,0.587,2.4],
+      [0.283,0.586,4.1],[0.284,0.585,6.5],[0.284,0.584,9.4],[0.285,0.583,13.0],
+      [0.285,0.582,17.5],[0.286,0.581,23.0],[0.286,0.580,30.0],[0.287,0.579,41.0],
+      [0.288,0.578,58.0],[0.288,0.577,82.0],[0.289,0.576,118.0],[0.290,0.575,172.0]
+    ],
+    B: [
+      [0.148,0.065,0.005],[0.149,0.066,0.15],[0.150,0.067,0.4],[0.151,0.068,0.8],
+      [0.151,0.069,1.4],[0.152,0.069,2.1],[0.153,0.070,3.0],[0.153,0.071,4.1],
+      [0.154,0.071,5.4],[0.154,0.072,7.0],[0.155,0.073,9.0],[0.156,0.074,12.0],
+      [0.157,0.075,17.0],[0.158,0.076,24.0],[0.159,0.077,40.0],[0.160,0.078,61.0]
+    ],
+    W: [
+      [0.3130,0.3292,0.02],[0.3129,0.3291,0.8],[0.3128,0.3291,2.5],[0.3128,0.3290,5.5],
+      [0.3127,0.3290,10.0],[0.3127,0.3290,16.0],[0.3126,0.3290,24.0],[0.3126,0.3289,34.0],
+      [0.3126,0.3289,46.0],[0.3127,0.3290,62.0],[0.3127,0.3290,82.0],[0.3128,0.3290,108.0],
+      [0.3129,0.3291,150.0],[0.3130,0.3292,210.0],[0.3131,0.3293,300.0],[0.3133,0.3294,450.0]
     ]
   };
 
+  const demo = precision === 16 ? demo16 : demo8;
   CHANNELS.forEach(ch => {
     if (demo[ch]) {
+      data[ch] = LEVELS.map(() => ({x:'',y:'',Y:''}));
       demo[ch].forEach((v, i) => {
         data[ch][i] = { x: v[0].toString(), y: v[1].toString(), Y: v[2].toString() };
       });
@@ -2614,14 +2723,15 @@ function renderAPLChart() {
       },
       scales: {
         x: {
+          display: false,
           title: {
-            display: true,
+            display: false,
             text: 'Wypełnienie ekranu bielą (APL)',
             color: '#555555',
             font: { family: 'Share Tech Mono', size: 11 }
           },
-          grid: { color: 'rgba(255,255,255,0.05)' },
-          ticks: { color: '#555555', font: { family: 'Share Tech Mono', size: 11 } }
+          grid: { display: false, color: 'rgba(255,255,255,0.05)' },
+          ticks: { display: false, color: '#555555', font: { family: 'Share Tech Mono', size: 11 } }
         },
         y: {
           title: {
@@ -2654,6 +2764,25 @@ if (hadSaved) {
   const badge = document.getElementById('storageBadge');
   if (badge) badge.style.display = 'flex';
 }
+
+// Sync precision UI to loaded state
+(function syncPrecisionUI() {
+  const n = precision;
+  const btn8  = document.getElementById('btn8');
+  const btn16 = document.getElementById('btn16');
+  if (btn8)  btn8.classList.toggle('prec-active',  n === 8);
+  if (btn16) btn16.classList.toggle('prec-active', n === 16);
+  const hints8  = '8 punktów: poziomy 0 · 36 · 73 · 109 · 146 · 182 · 219 · 255';
+  const hints16 = '16 punktów: poziomy 0 · 17 · 34 · 51 · 68 · 85 · 102 · 119 · 136 · 153 · 170 · 187 · 204 · 221 · 238 · 255';
+  const ph = document.getElementById('precHint');
+  const paste = document.getElementById('pasteHint');
+  const ipc = document.getElementById('infoPointCount');
+  const ilvl = document.getElementById('infoLevels');
+  if (ph)   ph.textContent   = n === 16 ? hints16 : hints8;
+  if (paste) paste.textContent = `→ ${n} wierszy dla aktualnie wybranego kanału. Separatory: spacja, tab, przecinek lub średnik.`;
+  if (ipc)  ipc.textContent  = n;
+  if (ilvl) ilvl.textContent  = LEVELS.join(', ');
+})();
 
 // Init reset button label
 switchCh('R');
@@ -2836,18 +2965,19 @@ const SPECTRAL_LOCUS = CIE_OBSERVER.map(([wl, X, Y, Z]) => {
 // Convert xy to approximate sRGB for CIE diagram coloring
 function xyToSRGB(cx, cy) {
   const Y = 1;
-  if (cy < 0.001) return [0, 0, 0];
+  if (cy < 0.0001) return [0, 0, 0];
   const X = (Y / cy) * cx;
   const Z = (Y / cy) * (1 - cx - cy);
   // XYZ to linear sRGB
   let r =  3.2406*X - 1.5372*Y - 0.4986*Z;
   let g = -0.9689*X + 1.8758*Y + 0.0415*Z;
   let b =  0.0557*X - 0.2040*Y + 1.0570*Z;
-  // Clamp negatives gently
-  const maxv = Math.max(r, g, b, 0.0001);
-  r = r / maxv; g = g / maxv; b = b / maxv;
-  r = Math.max(0, r); g = Math.max(0, g); b = Math.max(0, b);
-  // Gamma
+  // Clamp negatives to zero (gamut clipping)
+  r = r < 0 ? 0 : r; g = g < 0 ? 0 : g; b = b < 0 ? 0 : b;
+  // Normalize only if a channel exceeds 1 — preserves full saturation like Gamut Scope
+  const mx = Math.max(r, g, b);
+  if (mx > 1) { r /= mx; g /= mx; b /= mx; }
+  // Gamma encode
   const gam = v => v <= 0.0031308 ? 12.92*v : 1.055*Math.pow(v, 1/2.4) - 0.055;
   return [Math.round(gam(r)*255), Math.round(gam(g)*255), Math.round(gam(b)*255)];
 }
@@ -2856,8 +2986,11 @@ function buildCIEBackground(canvas) {
   const W = canvas.width, H = canvas.height;
   // Diagram bounds in xy
   const xMin = 0.0, xMax = 0.78, yMin = 0.0, yMax = 0.90;
-  const toCanvasX = x => ((x - xMin) / (xMax - xMin)) * W;
-  const toCanvasY = y => H - ((y - yMin) / (yMax - yMin)) * H;
+  // Internal padding (must match drawCIEDiagram) so labels/locus don't touch edges
+  const PAD = Math.round(W * 0.06);
+  const plotW = W - 2 * PAD, plotH = H - 2 * PAD;
+  const toCanvasX = x => PAD + ((x - xMin) / (xMax - xMin)) * plotW;
+  const toCanvasY = y => H - PAD - ((y - yMin) / (yMax - yMin)) * plotH;
 
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, W, H);
@@ -2866,9 +2999,11 @@ function buildCIEBackground(canvas) {
   const imgData = ctx.createImageData(W, H);
   const data = imgData.data;
 
-  // Build spectral locus polygon for point-in-polygon test
-  const locus = SPECTRAL_LOCUS.map(p => ({ x: toCanvasX(p.x), y: toCanvasY(p.y) }));
-  // Close with line from 700nm back to 380nm
+  // Build spectral locus polygon (densified to match the smoothed visible border)
+  const rawLocus = SPECTRAL_LOCUS.map(p => [toCanvasX(p.x), toCanvasY(p.y)]);
+  const denseLocus = densifyCatmullRom(rawLocus, 12);
+  const locus = denseLocus.map(([x, y]) => ({ x, y }));
+  // Close with line back to 380nm (line of purples)
   locus.push({ x: toCanvasX(SPECTRAL_LOCUS[0].x), y: toCanvasY(SPECTRAL_LOCUS[0].y) });
 
   function pointInPolygon(px, py, poly) {
@@ -2884,11 +3019,12 @@ function buildCIEBackground(canvas) {
   for (let py = 0; py < H; py++) {
     for (let px = 0; px < W; px++) {
       const idx = (py * W + px) * 4;
-      const cx = xMin + (px / W) * (xMax - xMin);
-      const cy = yMax - (py / H) * (yMax - yMin);
+      // inverse of the padded transform
+      const cx = xMin + ((px - PAD) / plotW) * (xMax - xMin);
+      const cy = yMax - ((py - PAD) / plotH) * (yMax - yMin);
       if (pointInPolygon(px, py, locus)) {
         const [r, g, b] = xyToSRGB(cx, cy);
-        data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = 200;
+        data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = 255;
       } else {
         data[idx+3] = 0;
       }
@@ -2898,89 +3034,111 @@ function buildCIEBackground(canvas) {
   return { ctx, W, H, xMin, xMax, yMin, yMax, toCanvasX, toCanvasY, locus };
 }
 
+// Smooth an open polyline by interpolating extra points with a Catmull-Rom spline
+function densifyCatmullRom(pts, stepsPerSeg) {
+  if (pts.length < 3) return pts.slice();
+  const out = [];
+  const n = pts.length;
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = pts[i === 0 ? 0 : i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2 < n ? i + 2 : n - 1];
+    for (let t = 0; t < stepsPerSeg; t++) {
+      const s = t / stepsPerSeg;
+      const s2 = s * s, s3 = s2 * s;
+      const x = 0.5 * ((2*p1[0]) + (-p0[0]+p2[0])*s + (2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*s2 + (-p0[0]+3*p1[0]-3*p2[0]+p3[0])*s3);
+      const y = 0.5 * ((2*p1[1]) + (-p0[1]+p2[1])*s + (2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*s2 + (-p0[1]+3*p1[1]-3*p2[1]+p3[1])*s3);
+      out.push([x, y]);
+    }
+  }
+  out.push(pts[n - 1]);
+  return out;
+}
+
 function drawCIEDiagram(canvas, measuredPts) {
   const W = canvas.width, H = canvas.height;
+  const S = W / 600; // resolution scale factor (canvas is rendered at 2× = 1200px)
   const xMin = 0.0, xMax = 0.78, yMin = 0.0, yMax = 0.90;
-  const toCanvasX = x => ((x - xMin) / (xMax - xMin)) * W;
-  const toCanvasY = y => H - ((y - yMin) / (yMax - yMin)) * H;
+  const PAD = Math.round(W * 0.06); // internal padding — must match buildCIEBackground
+  const plotW = W - 2 * PAD, plotH = H - 2 * PAD;
+  const toCanvasX = x => PAD + ((x - xMin) / (xMax - xMin)) * plotW;
+  const toCanvasY = y => H - PAD - ((y - yMin) / (yMax - yMin)) * plotH;
   const ctx = canvas.getContext('2d');
 
-  // Use cached background or build new
+  // Build high-res background
   const bgCanvas = document.createElement('canvas');
   bgCanvas.width = W; bgCanvas.height = H;
   buildCIEBackground(bgCanvas);
 
   ctx.clearRect(0, 0, W, H);
 
-  // Dark background
-  ctx.fillStyle = '#161922';
+  // Dark base background (matches Gamut Scope #05050a)
+  ctx.fillStyle = '#05050a';
   ctx.fillRect(0, 0, W, H);
 
-  // Draw gamut background
+  // Grid lines (subtle, behind the gamut)
+  ctx.strokeStyle = 'rgba(30,30,50,0.9)';
+  ctx.lineWidth = 0.6 * S;
+  for (let v = 0; v <= 0.7; v += 0.1) {
+    const cx = toCanvasX(v);
+    ctx.beginPath(); ctx.moveTo(cx, toCanvasY(yMin)); ctx.lineTo(cx, toCanvasY(yMax)); ctx.stroke();
+  }
+  for (let v = 0; v <= 0.8; v += 0.1) {
+    const cy = toCanvasY(v);
+    ctx.beginPath(); ctx.moveTo(toCanvasX(xMin), cy); ctx.lineTo(toCanvasX(xMax), cy); ctx.stroke();
+  }
+
+  // Draw colored gamut background
   ctx.drawImage(bgCanvas, 0, 0);
 
-  // Spectral locus border
+  // Spectral locus border — smoothed & densified via Catmull-Rom interpolation
+  const locusPts = SPECTRAL_LOCUS.map(p => [toCanvasX(p.x), toCanvasY(p.y)]);
+  const denseLocus = densifyCatmullRom(locusPts, 12);
   ctx.beginPath();
-  SPECTRAL_LOCUS.forEach((p, i) => {
-    const cx = toCanvasX(p.x), cy = toCanvasY(p.y);
-    i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
-  });
-  ctx.closePath();
+  denseLocus.forEach((pt, i) => { i === 0 ? ctx.moveTo(pt[0], pt[1]) : ctx.lineTo(pt[0], pt[1]); });
+  ctx.closePath(); // straight line of purples back to 380nm
   ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = 1.6 * S;
+  ctx.lineJoin = 'round';
   ctx.stroke();
 
-  // Wavelength labels on locus
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.font = '9px Share Tech Mono, monospace';
-  ctx.textAlign = 'center';
-  const wlLabels = [460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 620, 650, 700];
-  SPECTRAL_LOCUS.forEach(p => {
-    if (wlLabels.includes(p.wl)) {
-      const cx = toCanvasX(p.x), cy = toCanvasY(p.y);
-      // Offset label outward from centroid ~(0.33, 0.33)
-      const dx = p.x - 0.33, dy = p.y - 0.33;
-      const len = Math.sqrt(dx*dx + dy*dy);
-      const ox = (dx/len) * 12, oy = -(dy/len) * 12;
-      ctx.fillText(p.wl, cx + ox, cy + oy);
-    }
-  });
-
-  // Axes
+  // Axis tick labels (positioned in the padding gutter)
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = `${11 * S}px Share Tech Mono, monospace`;
   ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.lineWidth = 1;
-  // x axis labels
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.font = '10px Share Tech Mono, monospace';
+  ctx.lineWidth = 1 * S;
   ctx.textAlign = 'center';
+  const yAxisBottom = toCanvasY(yMin);
   for (let xv = 0.1; xv <= 0.7; xv = Math.round((xv + 0.1)*10)/10) {
     const cx = toCanvasX(xv);
-    ctx.beginPath(); ctx.moveTo(cx, H-1); ctx.lineTo(cx, H-5); ctx.stroke();
-    ctx.fillText(xv.toFixed(1), cx, H - 6);
+    ctx.beginPath(); ctx.moveTo(cx, yAxisBottom); ctx.lineTo(cx, yAxisBottom + 5 * S); ctx.stroke();
+    ctx.fillText(xv.toFixed(1), cx, yAxisBottom + 18 * S);
   }
   ctx.textAlign = 'right';
+  const xAxisLeft = toCanvasX(xMin);
   for (let yv = 0.1; yv <= 0.8; yv = Math.round((yv + 0.1)*10)/10) {
     const cy = toCanvasY(yv);
-    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(5, cy); ctx.stroke();
-    ctx.fillText(yv.toFixed(1), 22, cy + 3);
+    ctx.beginPath(); ctx.moveTo(xAxisLeft, cy); ctx.lineTo(xAxisLeft - 5 * S, cy); ctx.stroke();
+    ctx.fillText(yv.toFixed(1), xAxisLeft - 9 * S, cy + 4 * S);
   }
 
   // Axis titles
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = '11px Share Tech Mono, monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.font = `${13 * S}px Share Tech Mono, monospace`;
   ctx.textAlign = 'center';
-  ctx.fillText('x', W/2, H + 0); // below
+  ctx.fillText('x', W/2, H - 6 * S);
   ctx.save();
-  ctx.translate(8, H/2);
+  ctx.translate(12 * S, H/2);
   ctx.rotate(-Math.PI/2);
   ctx.fillText('y', 0, 0);
   ctx.restore();
 
-  // sRGB gamut triangle
+  // sRGB gamut triangle (dashed reference)
   const srgb = [
-    { x: 0.6400, y: 0.3300 }, // R
-    { x: 0.3000, y: 0.6000 }, // G
-    { x: 0.1500, y: 0.0600 }, // B
+    { x: 0.6400, y: 0.3300 },
+    { x: 0.3000, y: 0.6000 },
+    { x: 0.1500, y: 0.0600 },
   ];
   ctx.beginPath();
   srgb.forEach((p, i) => {
@@ -2988,68 +3146,107 @@ function drawCIEDiagram(canvas, measuredPts) {
     i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
   });
   ctx.closePath();
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-  ctx.setLineDash([5, 3]);
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+  ctx.setLineDash([6 * S, 4 * S]);
+  ctx.lineWidth = 1.3 * S;
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // D65 point
+  // D65 white point
   const d65cx = toCanvasX(0.3127), d65cy = toCanvasY(0.3290);
   ctx.beginPath();
-  ctx.arc(d65cx, d65cy, 5, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.arc(d65cx, d65cy, 6 * S, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 3 * S; ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(d65cx, d65cy, 6 * S, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '9px Share Tech Mono, monospace';
+  ctx.fillStyle = '#fff';
+  ctx.font = `${11 * S}px Share Tech Mono, monospace`;
   ctx.textAlign = 'left';
-  ctx.fillText('D65', d65cx + 7, d65cy + 3);
+  ctx.lineWidth = 3 * S; ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+  ctx.strokeText('D65', d65cx + 9 * S, d65cy + 4 * S);
+  ctx.fillText('D65', d65cx + 9 * S, d65cy + 4 * S);
 
-  // ── Draw reference points (empty circles) ────────────────────────────────
+  // ── Reference points (hollow rings) ──────────────────────────────────────
   CC_PATCHES.forEach((p, i) => {
     const cx = toCanvasX(p.ref.x), cy = toCanvasY(p.ref.y);
+    // dark halo for contrast
     ctx.beginPath();
-    ctx.arc(cx, cy, 5, 0, Math.PI*2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-    ctx.lineWidth = 1.2;
+    ctx.arc(cx, cy, 6 * S, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 3.2 * S;
+    ctx.stroke();
+    // ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6 * S, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1.4 * S;
     ctx.stroke();
   });
 
-  // ── Draw measured points (filled) ─────────────────────────────────────────
+  // ── Measured points (filled, high-visibility) ────────────────────────────
+  const R = 9 * S; // marker radius — larger than before for visibility
   measuredPts.forEach((pt, i) => {
     if (!pt) return;
     const p = CC_PATCHES[i];
     const cx = toCanvasX(pt.x), cy = toCanvasY(pt.y);
 
-    // Line from ref to measured (if different)
+    // connector line from ref to measured
     const refcx = toCanvasX(p.ref.x), refcy = toCanvasY(p.ref.y);
     const dist = Math.sqrt((pt.x - p.ref.x)**2 + (pt.y - p.ref.y)**2);
     if (dist > 0.0005) {
       ctx.beginPath();
       ctx.moveTo(refcx, refcy);
       ctx.lineTo(cx, cy);
-      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-      ctx.lineWidth = 0.8;
-      ctx.setLineDash([2, 2]);
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+      ctx.lineWidth = 2.4 * S;
+      ctx.setLineDash([3 * S, 3 * S]);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1 * S;
       ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    // Filled circle
+    // dark outer halo (separates marker from colourful background)
     ctx.beginPath();
-    ctx.arc(cx, cy, 6, 0, Math.PI*2);
+    ctx.arc(cx, cy, R + 2.2 * S, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fill();
+
+    // filled patch-coloured circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI*2);
     ctx.fillStyle = p.color;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.lineWidth = 1.6 * S;
     ctx.stroke();
 
-    // Patch number
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.font = 'bold 7px Share Tech Mono, monospace';
+    // patch number with outline for legibility on any colour
+    const num = String(i + 1);
+    const textCol = isLightColor(p.color) ? '#000' : '#fff';
+    const haloCol = textCol === '#000' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)';
+    ctx.font = `bold ${10.5 * S}px Share Tech Mono, monospace`;
     ctx.textAlign = 'center';
-    ctx.fillText(i + 1, cx, cy + 2.5);
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3 * S;
+    ctx.strokeStyle = haloCol;
+    ctx.strokeText(num, cx, cy + 0.5 * S);
+    ctx.fillStyle = textCol;
+    ctx.fillText(num, cx, cy + 0.5 * S);
+    ctx.textBaseline = 'alphabetic';
   });
+}
+
+// Decide black vs white label text based on patch colour luminance
+function isLightColor(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return false;
+  const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+  const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+  return lum > 0.6;
 }
 
 function renderCCDiagram() {

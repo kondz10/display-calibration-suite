@@ -604,6 +604,9 @@
     <button class="tab" onclick="switchTab(2)">
       <span class="tab-num">03</span>Eksport TI3
     </button>
+    <button class="tab" onclick="switchTab(3)">
+      <span class="tab-num">04</span>ColorChecker
+    </button>
   </nav>
 </header>
 
@@ -651,37 +654,32 @@
     <div class="field">
       <label>Typ technologii <span class="req">*</span></label>
       <select id="disp_tech">
-        <option value="LCD">LCD (ogólny)</option>
-        <option value="LCD CCFL">LCD CCFL</option>
-        <option value="LCD RGB LED">LCD RGB LED</option>
-        <option value="LCD White LED" selected>LCD White LED (typowy)</option>
-        <option value="LCD GB-LED">LCD GB-LED / WRGB</option>
+        <option value="LCD White LED" selected>LED Back-lit</option>
+        <option value="LCD FALD">LED Back-lit FALD</option>
+        <option value="Mini LED">Mini LED</option>
+        <option value="LCD Edge LED">LED Edge-lit</option>
         <option value="OLED">OLED</option>
-        <option value="AMOLED">AMOLED</option>
-        <option value="CRT">CRT</option>
-        <option value="Plasma">Plasma</option>
-        <option value="Projector">Projektor</option>
+        <option value="WOLED">WOLED</option>
+        <option value="QD-OLED">QD-OLED</option>
       </select>
     </div>
     <div class="field">
       <label>Docelowy biały punkt <span class="req">*</span></label>
       <select id="white_point">
-        <option value="D65" selected>D65 (6500 K — standard)</option>
-        <option value="D50">D50 (5000 K — prepress)</option>
-        <option value="D55">D55 (5500 K)</option>
-        <option value="D75">D75 (7500 K)</option>
-        <option value="9300K">9300 K (TV/sRGB native)</option>
-        <option value="Native">Native (pomierzony)</option>
+        <option value="DCI">DCI white</option>
+        <option value="D65" selected>D65</option>
+        <option value="D50">D50</option>
       </select>
     </div>
     <div class="field">
       <label>Gamma docelowa <span class="req">*</span></label>
       <select id="target_gamma">
-        <option value="2.2" selected>2.2 (sRGB/standard)</option>
-        <option value="2.4">2.4 (BT.1886 / video)</option>
-        <option value="1.8">1.8 (macOS legacy)</option>
-        <option value="sRGB">sRGB (krzywa TRC)</option>
-        <option value="L*">L* (perceptual)</option>
+        <option value="1.0">1.0</option>
+        <option value="1.8">1.8</option>
+        <option value="2.0">2.0</option>
+        <option value="2.2" selected>2.2</option>
+        <option value="2.4">2.4</option>
+        <option value="2.6">2.6</option>
       </select>
     </div>
   </div>
@@ -733,7 +731,7 @@
 
   <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
     <span style="font-size:11px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--text2);">Dokładność pomiaru:</span>
-    <button class="acc-btn active-acc" id="acc-8" onclick="setAccuracy(8)">
+    <button class="acc-btn" id="acc-8" onclick="setAccuracy(8)">
       <span class="acc-num">8</span> kroków
       <span class="acc-sub">szybki · 32 próbki</span>
     </button>
@@ -741,11 +739,15 @@
       <span class="acc-num">16</span> kroków
       <span class="acc-sub">dokładny · 64 próbki</span>
     </button>
+    <button class="acc-btn active-acc" id="acc-32" onclick="setAccuracy(32)">
+      <span class="acc-num">32</span> kroków
+      <span class="acc-sub">pełny · 128 próbki</span>
+    </button>
   </div>
 
   <div class="infobox" id="steps-infobox">
-    Skala RGB: <strong id="steps-label">0, 36, 73, 109, 146, 182, 219, 255</strong> (8 kroków). Podaj x, y dla wszystkich kroków wszystkich kanałów.
-    Luminancja Y (cd/m²): wymagana dla <strong>wszystkich kroków szarości</strong> oraz <strong>tylko ostatniego kroku (255)</strong> dla R, G, B. Pozostałe pola Y są nieaktywne — parser automatycznie je ignoruje.
+    Skala RGB: <strong id="steps-label">0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 255</strong> (32 kroki). Podaj x, y, Y dla wszystkich kroków wszystkich kanałów.
+    Luminancja Y (cd/m²): wymagana dla <strong>wszystkich kroków</strong> we wszystkich kanałach (Gray, R, G, B) — format danych jest identyczny dla każdego kanału.
   </div>
   <div class="warnbox" style="font-size:11px">
     ⚠ <strong>Krok 0 (RGB=0,0,0) dla kanałów R, G, B</strong> jest automatycznie ignorowany —
@@ -761,7 +763,7 @@
   <div class="paste-grid">
     <div class="paste-card">
       <div class="paste-card-title"><span style="color:#aaa">⬜</span> <span style="color:var(--text)">Gray</span></div>
-      <textarea id="paste-gray" placeholder="0.3127&#9;0.3290&#9;1.0000&#10;0.3128&#9;0.3291&#9;0.8542&#10;...&#10;(8 wierszy)"></textarea>
+      <textarea id="paste-gray" placeholder="0.3127&#9;0.3290&#9;1.0000&#10;0.3128&#9;0.3291&#9;0.8542&#10;...&#10;(32 wiersze)"></textarea>
       <div>
         <button class="btn btn-secondary" style="padding:5px 12px;font-size:11px" onclick="parsePaste('gray')">Wczytaj</button>
         <span class="paste-status" id="ps-gray"></span>
@@ -769,7 +771,7 @@
     </div>
     <div class="paste-card">
       <div class="paste-card-title"><span style="color:#ff8080">🔴</span> <span style="color:#ff8080">Red</span></div>
-      <textarea id="paste-r" placeholder="0.6400&#9;0.3300&#9;1.0000&#10;0.6398&#9;0.3301&#9;0.6594&#10;...&#10;(8 wierszy)"></textarea>
+      <textarea id="paste-r" placeholder="0.6400&#9;0.3300&#9;0.1200&#10;0.6398&#9;0.3301&#9;1.6500&#10;...&#10;(32 wiersze)"></textarea>
       <div>
         <button class="btn btn-secondary" style="padding:5px 12px;font-size:11px" onclick="parsePaste('r')">Wczytaj</button>
         <span class="paste-status" id="ps-r"></span>
@@ -777,7 +779,7 @@
     </div>
     <div class="paste-card">
       <div class="paste-card-title"><span style="color:#80ff9a">🟢</span> <span style="color:#80ff9a">Green</span></div>
-      <textarea id="paste-g" placeholder="0.3000&#9;0.6000&#9;1.0000&#10;0.3001&#9;0.5999&#9;0.6594&#10;...&#10;(8 wierszy)"></textarea>
+      <textarea id="paste-g" placeholder="0.3000&#9;0.6000&#9;0.0800&#10;0.3001&#9;0.5999&#9;4.6000&#10;...&#10;(32 wiersze)"></textarea>
       <div>
         <button class="btn btn-secondary" style="padding:5px 12px;font-size:11px" onclick="parsePaste('g')">Wczytaj</button>
         <span class="paste-status" id="ps-g"></span>
@@ -785,7 +787,7 @@
     </div>
     <div class="paste-card">
       <div class="paste-card-title"><span style="color:#80aaff">🔵</span> <span style="color:#80aaff">Blue</span></div>
-      <textarea id="paste-b" placeholder="0.1500&#9;0.0600&#9;1.0000&#10;0.1501&#9;0.0601&#9;0.6594&#10;...&#10;(8 wierszy)"></textarea>
+      <textarea id="paste-b" placeholder="0.1500&#9;0.0600&#9;0.0050&#10;0.1502&#9;0.0601&#9;0.7000&#10;...&#10;(32 wiersze)"></textarea>
       <div>
         <button class="btn btn-secondary" style="padding:5px 12px;font-size:11px" onclick="parsePaste('b')">Wczytaj</button>
         <span class="paste-status" id="ps-b"></span>
@@ -802,19 +804,19 @@
   </div>
 
   <div id="ch-gray" class="ch-panel active">
-    <div class="section-title"><em>Gray</em> ramp — R=G=B (8 kroków)</div>
+    <div class="section-title"><em>Gray</em> ramp — R=G=B (32 kroki)</div>
     <div id="table-gray"></div>
   </div>
   <div id="ch-r" class="ch-panel">
-    <div class="section-title"><em>Red</em> ramp — G=B=0 (8 kroków)</div>
+    <div class="section-title"><em>Red</em> ramp — G=B=0 (32 kroki)</div>
     <div id="table-r"></div>
   </div>
   <div id="ch-g" class="ch-panel">
-    <div class="section-title"><em>Green</em> ramp — R=B=0 (8 kroków)</div>
+    <div class="section-title"><em>Green</em> ramp — R=B=0 (32 kroki)</div>
     <div id="table-g"></div>
   </div>
   <div id="ch-b" class="ch-panel">
-    <div class="section-title"><em>Blue</em> ramp — R=G=0 (8 kroków)</div>
+    <div class="section-title"><em>Blue</em> ramp — R=G=0 (32 kroki)</div>
     <div id="table-b"></div>
   </div>
 
@@ -841,6 +843,12 @@
     <span class="pdot-label">Krok 3 z 3 — generuj i pobierz plik TI3</span>
   </div>
 
+  <div class="warnbox" style="font-size:13px">
+    ⚠ Generowanie pliku <strong>.ti3</strong> wymaga uzupełnienia <strong>obu</strong> sekcji:<br>
+    &nbsp;&nbsp;① <strong>Pomiary RGBW</strong> — zakładka „Pomiary” (kanały Gray, R, G, B)<br>
+    &nbsp;&nbsp;② <strong>ColorChecker 24 patche</strong> — zakładka „ColorChecker” (wklej dane i kliknij Wczytaj)<br>
+    Brakujące dane zostaną wskazane automatycznie po kliknięciu „Generuj TI3”.
+  </div>
   <div class="infobox">
     Plik <strong>.ti3</strong> (format CGATS) jest gotowy do użycia z Argyll CMS. Uruchom: <br>
     <code>colprof -v -D "NazwaProfilu" -q m -a s -d 3 pomiary.ti3</code><br>
@@ -860,7 +868,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
       Kopiuj
     </button>
-    <span id="gen-status" class="status-warn">— kliknij Generuj TI3</span>
+    <button class="btn btn-secondary" onclick="switchTab(3)" style="border-color:rgba(139,21,186,0.4);color:var(--accent)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      + ColorChecker
+    </button>
+    <span id="gen-status" class="status-warn">— wymagane: pomiary RGBW + ColorChecker (24 patche)</span>
   </div>
 
   <div id="output-preview" class="output-box">— wygeneruj plik klikając "Generuj TI3" —</div>
@@ -878,14 +890,77 @@
   </div>
 </div>
 
+<!-- ══════════════════════ PANEL 4: COLORCHECKER ══════════════════════ -->
+<div class="panel" id="panel-3">
+
+  <div class="progress-row">
+    <div class="pdot done"></div>
+    <div class="pdot done"></div>
+    <div class="pdot done"></div>
+    <div class="pdot active"></div>
+    <span class="pdot-label">Opcjonalnie — dodaj próbki ColorChecker do TI3</span>
+  </div>
+
+  <div class="infobox">
+    Wklej pomiary <strong>Macbeth ColorChecker</strong> (24 plamy barwne).<br>
+    Format <strong>6 kolumn</strong>: <code>R&nbsp;G&nbsp;B&nbsp;x&nbsp;y&nbsp;Y</code> — wartości urządzenia (0–255) + chromatyczność + luminancja cd/m².<br>
+    Format <strong>3 kolumny</strong>: <code>x&nbsp;y&nbsp;Y</code> — użyje standardowych wartości sRGB jako device R/G/B (mniej dokładne).<br>
+    Kolejność plam: <strong>Dark Skin → Black</strong> (standardowa kolejność wierszy ColorChecker 4×6).<br>
+    <strong style="color:var(--warn)">⚠ Dla spójnego TI3 użyj formatu 6-kolumnowego</strong> — device RGB musi odpowiadać rzeczywistym wartościom wysłanym na wyświetlacz.
+  </div>
+
+  <div class="section-title"><em>IMPORT</em> Wklej 24 wiersze pomiarów (R G B x y Y lub x y Y)</div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom:20px">
+
+    <!-- Paste card -->
+    <div class="paste-card" style="grid-column:1">
+      <div class="paste-card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <span style="color:var(--text)">ColorChecker 24 — wklej R G B x y Y</span>
+      </div>
+      <textarea id="paste-cc" style="width:100%;height:340px;font-size:11px;padding:8px;background:var(--bg);border-color:var(--border);color:var(--text2);font-family:var(--mono);line-height:1.7;resize:vertical"
+        placeholder="115  82  68  0.4000  0.3500  10.00&#10;194 150 130  0.3772  0.3483  34.88&#10; 98 122 157  0.2471  0.2539  19.43&#10; 87 108  67  0.3499  0.3775  13.30&#10;133 128 177  0.2680  0.2457  24.60&#10;103 189 170  0.2613  0.3430  42.89&#10;214 126  44  0.5082  0.4089  30.10&#10; 80  91 166  0.2110  0.1750  11.95&#10;193  90  99  0.4534  0.3132  19.11&#10; 94  60 108  0.2934  0.2216   6.57&#10;157 188  64  0.3804  0.4868  44.34&#10;224 163  46  0.4861  0.4379  43.12&#10; 56  61 150  0.1712  0.1348   6.50&#10; 70 148  73  0.3091  0.4924  23.07&#10;175  54  60  0.5528  0.3014  14.38&#10;231 199  31  0.4450  0.4744  59.10&#10;187  86 149  0.3626  0.2497  19.78&#10;  8 133 161  0.1958  0.2538  19.72&#10;243 243 242  0.3500  0.3543  91.29&#10;200 200 200  0.3500  0.3543  59.10&#10;160 160 160  0.3500  0.3543  36.18&#10;122 122 121  0.3500  0.3543  19.78&#10; 85  85  85  0.3500  0.3543   9.00&#10; 52  52  52  0.3500  0.3543   3.14&#10;(24 wiersze: R G B x y Y)"></textarea>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+        <button class="btn btn-secondary" style="padding:5px 12px;font-size:11px" onclick="parsePasteCC()">Wczytaj</button>
+        <button class="btn btn-secondary" style="padding:5px 12px;font-size:11px" onclick="fillSampleCC()">Wstaw przykładowe</button>
+        <button class="btn btn-secondary" style="padding:5px 12px;font-size:11px;color:#ff5252;border-color:#ff5252" onclick="clearCC()">Wyczyść</button>
+        <span class="paste-status" id="ps-cc"></span>
+      </div>
+    </div>
+
+    <!-- Preview table -->
+    <div style="grid-column:2; overflow-x:auto">
+      <div id="cc-table-wrap">
+        <div style="color:var(--text3);font-family:var(--mono);font-size:11px;padding:20px 0">— wczytaj dane, aby zobaczyć podgląd —</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CC status banner -->
+  <div id="cc-banner" style="display:none; background:rgba(51,255,51,0.04); border:1px solid rgba(51,255,51,0.2); border-radius:var(--radius); padding:12px 16px; font-family:var(--mono); font-size:12px; color:#33ff33; margin-bottom:16px">
+    ✓ 24 próbki ColorChecker zostaną dołączone do następnego <strong>Generuj TI3</strong>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="switchTab(2)">← Wróć do Eksport</button>
+    <button class="btn btn-primary" onclick="switchTab(2); setTimeout(generateTI3, 80)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4v16h16V8l-4-4H4z"/><path d="M14 4v4h4"/></svg>
+      Generuj TI3 z ColorChecker
+    </button>
+  </div>
+</div>
+
 </main>
 
 <script>
 // ── State ──────────────────────────────────────────────────────────
 const STEPS_8  = [0, 36, 73, 109, 146, 182, 219, 255];
 const STEPS_16 = [0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255];
-let STEPS = STEPS_8;
-let ACCURACY = 8;
+const STEPS_32 = [0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 255];
+let STEPS = STEPS_32;
+let ACCURACY = 32;
 
 const CHANNELS = ['gray','r','g','b'];
 const CH_LABELS = { gray:'Szarość', r:'Red', g:'Green', b:'Blue' };
@@ -909,12 +984,13 @@ function setAccuracy(n) {
     if (!confirm(`Zmiana dokładności z ${ACCURACY} na ${n} kroków wyczyści wprowadzone dane pomiarowe. Kontynuować?`)) return;
   }
   ACCURACY = n;
-  STEPS = n === 16 ? STEPS_16 : STEPS_8;
+  STEPS = n === 32 ? STEPS_32 : (n === 16 ? STEPS_16 : STEPS_8);
   initMeas();
 
   // Update UI
   document.getElementById('acc-8').classList.toggle('active-acc', n === 8);
   document.getElementById('acc-16').classList.toggle('active-acc', n === 16);
+  document.getElementById('acc-32').classList.toggle('active-acc', n === 32);
 
   const labels = STEPS.join(', ');
   document.getElementById('steps-label').textContent = labels;
@@ -929,15 +1005,15 @@ function setAccuracy(n) {
   // Update paste placeholders
   const rowHint = `(${n} wierszy)`;
   document.getElementById('paste-gray').placeholder = `0.3127\t0.3290\t1.0000\n0.3128\t0.3291\t0.8542\n...\n${rowHint}`;
-  document.getElementById('paste-r').placeholder   = `0.6400\t0.3300\t1.0000\n0.6398\t0.3301\t0.6594\n...\n${rowHint}`;
-  document.getElementById('paste-g').placeholder   = `0.3000\t0.6000\t1.0000\n0.3001\t0.5999\t0.6594\n...\n${rowHint}`;
-  document.getElementById('paste-b').placeholder   = `0.1500\t0.0600\t1.0000\n0.1501\t0.0601\t0.6594\n...\n${rowHint}`;
+  document.getElementById('paste-r').placeholder   = `0.6400\t0.3300\t0.1200\n0.6398\t0.3301\t1.6500\n...\n${rowHint}`;
+  document.getElementById('paste-g').placeholder   = `0.3000\t0.6000\t0.0800\n0.3001\t0.5999\t4.6000\n...\n${rowHint}`;
+  document.getElementById('paste-b').placeholder   = `0.1500\t0.0600\t0.0050\n0.1502\t0.0601\t0.7000\n...\n${rowHint}`;
 
   // Rebuild tables
   buildTables();
   generatedTI3 = '';
   document.getElementById('btn-download').disabled = true;
-  document.getElementById('gen-status').textContent = '— kliknij Generuj TI3';
+  document.getElementById('gen-status').textContent = '— wymagane: pomiary RGBW + ColorChecker (24 patche)';
   document.getElementById('gen-status').className = 'status-warn';
 }
 
@@ -983,28 +1059,197 @@ function parsePaste(ch) {
     parsed.push({x, y, Y: (cols.length >= 3 && !isNaN(Y)) ? Y : ''});
   }
 
-  // Save and rebuild table — only store Y where the field actually exists
-  // Gray: all rows have Y; R/G/B: only last row (index ACCURACY-1) has Y
-  // Note: for r/g/b at index 0, x/y are stored but ignored by the generator (uses gray[0])
-  const lastIdx = ACCURACY - 1;
-  const hasYField = (idx) => (ch === 'gray') || (idx === lastIdx);
+  // Save and rebuild table — store Y for all rows in all channels (same format as Gray)
   parsed.forEach((p, i) => {
     meas[ch][i].x = p.x;
     meas[ch][i].y = p.y;
-    if (hasYField(i)) {
-      meas[ch][i].Y = p.Y;
-    }
+    meas[ch][i].Y = p.Y;
   });
   buildTable(ch);
 
-  const yCount = ch === 'gray' ? parsed.filter(p => p.Y !== '').length : (parsed[lastIdx].Y !== '' ? 1 : 0);
-  const yMax = ch === 'gray' ? 8 : 1;
+  const yCount = parsed.filter(p => p.Y !== '').length;
+  const yMax = ACCURACY;
   const blackNote = (ch !== 'gray') ? ' — krok 0 ignorowany (używany Gray krok 0)' : '';
-  statusEl.textContent = `✓ 8 wierszy, Y: ${yCount}/${yMax}${blackNote}`;
+  statusEl.textContent = `✓ ${ACCURACY} wierszy, Y: ${yCount}/${yMax}${blackNote}`;
   statusEl.className = 'paste-status paste-ok';
 
   // Switch to this channel tab to show result
   switchCh(ch);
+}
+
+// ── ColorChecker state ─────────────────────────────────────────────
+const CC_NAMES = [
+  'Dark Skin','Light Skin','Blue Sky','Foliage','Blue Flower','Bluish Green',
+  'Orange','Purplish Blue','Moderate Red','Purple','Yellow Green','Orange Yellow',
+  'Blue','Green','Red','Yellow','Magenta','Cyan',
+  'White','Neutral 8','Neutral 6.5','Neutral 5','Neutral 3.5','Black'
+];
+
+// Approximate sRGB values for swatches (display only)
+const CC_RGB = [
+  [115,82,68],[194,150,130],[98,122,157],[87,108,67],[133,128,177],[103,189,170],
+  [214,126,44],[80,91,166],[193,90,99],[94,60,108],[157,188,64],[224,163,46],
+  [56,61,150],[70,148,73],[175,54,60],[231,199,31],[187,86,149],[8,133,161],
+  [243,243,242],[200,200,200],[160,160,160],[122,122,121],[85,85,85],[52,52,52]
+];
+
+let ccMeas = null; // null = not loaded; array of 24 {x,y,Y}
+
+function parsePasteCC() {
+  const raw = document.getElementById('paste-cc').value.trim();
+  const statusEl = document.getElementById('ps-cc');
+  if (!raw) { statusEl.textContent = '— pusto'; statusEl.className = 'paste-status'; return; }
+
+  const lines = raw.split(/\n/).map(l => l.trim()).filter(l => l.length > 0 && !/^\(/.test(l));
+  if (lines.length !== 24) {
+    statusEl.textContent = `✗ Oczekiwano 24 wierszy, jest ${lines.length}`;
+    statusEl.className = 'paste-status paste-err';
+    return;
+  }
+
+  const parsed = [];
+  let mode6col = false; // detected from first valid row
+  for (let i = 0; i < 24; i++) {
+    const cols = lines[i].split(/[\t,;]+|\s+/).map(c => c.replace(',','.')).filter(c => c !== '');
+    if (i === 0) {
+      // Detect mode: 6 cols (R G B x y Y) vs 3 cols (x y Y)
+      // If first 3 values are integers 0-255 and next 3 are small floats → 6-col
+      if (cols.length >= 6) {
+        const v0 = parseFloat(cols[0]), v1 = parseFloat(cols[1]), v2 = parseFloat(cols[2]);
+        const v3 = parseFloat(cols[3]);
+        if (Number.isInteger(v0) && v0 >= 0 && v0 <= 255 &&
+            Number.isInteger(v1) && v1 >= 0 && v1 <= 255 &&
+            Number.isInteger(v2) && v2 >= 0 && v2 <= 255 &&
+            v3 > 0 && v3 < 1) {
+          mode6col = true;
+        }
+      }
+    }
+
+    let devR, devG, devB, x, y, Y;
+    if (mode6col) {
+      if (cols.length < 6) {
+        statusEl.textContent = `✗ Wiersz ${i+1}: oczekiwano 6 kolumn (R G B x y Y)`;
+        statusEl.className = 'paste-status paste-err';
+        return;
+      }
+      devR = Math.round(parseFloat(cols[0]));
+      devG = Math.round(parseFloat(cols[1]));
+      devB = Math.round(parseFloat(cols[2]));
+      x = parseFloat(cols[3]);
+      y = parseFloat(cols[4]);
+      Y = cols.length >= 6 ? parseFloat(cols[5]) : 0;
+      if (devR < 0 || devR > 255 || devG < 0 || devG > 255 || devB < 0 || devB > 255) {
+        statusEl.textContent = `✗ Wiersz ${i+1}: R/G/B poza zakresem 0–255`;
+        statusEl.className = 'paste-status paste-err';
+        return;
+      }
+    } else {
+      if (cols.length < 2) {
+        statusEl.textContent = `✗ Wiersz ${i+1}: za mało kolumn`;
+        statusEl.className = 'paste-status paste-err';
+        return;
+      }
+      // Fallback: use CC_RGB standard device values
+      devR = CC_RGB[i][0]; devG = CC_RGB[i][1]; devB = CC_RGB[i][2];
+      x = parseFloat(cols[0]);
+      y = parseFloat(cols[1]);
+      Y = cols.length >= 3 ? parseFloat(cols[2]) : 0;
+    }
+
+    if (isNaN(x) || isNaN(y) || x <= 0 || y <= 0 || (x+y) >= 1) {
+      statusEl.textContent = `✗ Wiersz ${i+1}: x/y poza zakresem (wymagane: x>0, y>0, x+y<1)`;
+      statusEl.className = 'paste-status paste-err';
+      return;
+    }
+    parsed.push({devR, devG, devB, x, y, Y: (!isNaN(Y) && Y !== null) ? Y : 0});
+  }
+
+  ccMeas = parsed;
+  const modeLabel = mode6col ? '6-kol (R G B x y Y)' : '3-kol (x y Y — std RGB)';
+  statusEl.textContent = `✓ 24 wiersze wczytane [${modeLabel}]`;
+  statusEl.className = 'paste-status paste-ok';
+  document.getElementById('cc-banner').style.display = 'block';
+  buildCCTable();
+}
+
+function fillSampleCC() {
+  // Standard ColorChecker sRGB device values + approximate xyY (D65 illuminant)
+  const sample = [
+    [115, 82, 68,  0.4000,0.3500,10.00],
+    [194,150,130,  0.3772,0.3483,34.88],
+    [ 98,122,157,  0.2471,0.2539,19.43],
+    [ 87,108, 67,  0.3499,0.3775,13.30],
+    [133,128,177,  0.2680,0.2457,24.60],
+    [103,189,170,  0.2613,0.3430,42.89],
+    [214,126, 44,  0.5082,0.4089,30.10],
+    [ 80, 91,166,  0.2110,0.1750,11.95],
+    [193, 90, 99,  0.4534,0.3132,19.11],
+    [ 94, 60,108,  0.2934,0.2216, 6.57],
+    [157,188, 64,  0.3804,0.4868,44.34],
+    [224,163, 46,  0.4861,0.4379,43.12],
+    [ 56, 61,150,  0.1712,0.1348, 6.50],
+    [ 70,148, 73,  0.3091,0.4924,23.07],
+    [175, 54, 60,  0.5528,0.3014,14.38],
+    [231,199, 31,  0.4450,0.4744,59.10],
+    [187, 86,149,  0.3626,0.2497,19.78],
+    [  8,133,161,  0.1958,0.2538,19.72],
+    [243,243,242,  0.3500,0.3543,91.29],
+    [200,200,200,  0.3500,0.3543,59.10],
+    [160,160,160,  0.3500,0.3543,36.18],
+    [122,122,121,  0.3500,0.3543,19.78],
+    [ 85, 85, 85,  0.3500,0.3543, 9.00],
+    [ 52, 52, 52,  0.3500,0.3543, 3.14]
+  ];
+  const lines = sample.map(r =>
+    `${String(r[0]).padStart(3)} ${String(r[1]).padStart(3)} ${String(r[2]).padStart(3)}  ${r[3].toFixed(4)}\t${r[4].toFixed(4)}\t${r[5].toFixed(2)}`
+  ).join('\n');
+  document.getElementById('paste-cc').value = lines;
+  parsePasteCC();
+}
+
+function clearCC() {
+  ccMeas = null;
+  document.getElementById('paste-cc').value = '';
+  document.getElementById('ps-cc').textContent = '';
+  document.getElementById('ps-cc').className = 'paste-status';
+  document.getElementById('cc-banner').style.display = 'none';
+  document.getElementById('cc-table-wrap').innerHTML = '<div style="color:var(--text3);font-family:var(--mono);font-size:11px;padding:20px 0">— wczytaj dane, aby zobaczyć podgląd —</div>';
+}
+
+function buildCCTable() {
+  if (!ccMeas) return;
+  const rows = ccMeas.map((m, i) => {
+    const r = m.devR, g = m.devG, b = m.devB;
+    const hasCustomRGB = (r !== CC_RGB[i][0] || g !== CC_RGB[i][1] || b !== CC_RGB[i][2]);
+    const rgbColor = `rgb(${r},${g},${b})`;
+    return `<tr>
+      <td>
+        <div class="rgb-cell">
+          <div class="rgb-swatch" style="background:${rgbColor}"></div>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text)">${CC_NAMES[i]}</span>
+        </div>
+      </td>
+      <td style="font-family:var(--mono);font-size:12px;padding:4px 8px;color:${hasCustomRGB?'#33ff33':'var(--text3)'}">
+        ${r} ${g} ${b}${hasCustomRGB?'':' <span style="font-size:10px;color:var(--text3)">(std)</span>'}
+      </td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--text2);padding:4px 8px">${m.x.toFixed(4)}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--text2);padding:4px 8px">${m.y.toFixed(4)}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--warn);padding:4px 8px">${m.Y.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('cc-table-wrap').innerHTML = `
+    <table class="meas-table">
+      <thead><tr>
+        <th>Plama / Patch</th>
+        <th>Device R G B</th>
+        <th>x (CIE)</th>
+        <th>y (CIE)</th>
+        <th>Y cd/m²</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 // ── Build measurement tables ──────────────────────────────────────
@@ -1045,7 +1290,7 @@ function buildTable(ch) {
       </tr>`;
     }
 
-    const showY = (ch === 'gray') || (i === STEPS.length - 1);
+    const showY = true; // Y active for all rows in all channels
     const yCell = showY
       ? `<input type="number" step="0.000001" min="0" placeholder="cd/m²"
           id="m_${ch}_${i}_Y" value="${meas[ch][i].Y}"
@@ -1102,6 +1347,10 @@ function switchTab(n) {
   if (n === 2) {
     updateCmdHints();
   }
+  // Update CC banner note in status
+  if (n === 2 && ccMeas) {
+    document.getElementById('gen-status').textContent = '— gotowe — kliknij Generuj TI3';
+  }
 }
 
 function switchCh(ch) {
@@ -1156,11 +1405,32 @@ function fillSampleData() {
     return result;
   };
 
-  const samples = ACCURACY === 8 ? samples8 : {
+  const interp32 = (arr) => {
+    const result = [];
+    for (let i = 0; i < 32; i++) {
+      const t = i / 31 * 7;
+      const lo = Math.floor(t);
+      const hi = Math.min(lo + 1, 7);
+      const f = t - lo;
+      result.push([
+        arr[lo][0] + (arr[hi][0] - arr[lo][0]) * f,
+        arr[lo][1] + (arr[hi][1] - arr[lo][1]) * f,
+        arr[lo][2] + (arr[hi][2] - arr[lo][2]) * f
+      ]);
+    }
+    return result;
+  };
+
+  const samples = ACCURACY === 8 ? samples8 : ACCURACY === 16 ? {
     gray: interp16(samples8.gray),
     r:    interp16(samples8.r),
     g:    interp16(samples8.g),
     b:    interp16(samples8.b)
+  } : {
+    gray: interp32(samples8.gray),
+    r:    interp32(samples8.r),
+    g:    interp32(samples8.g),
+    b:    interp32(samples8.b)
   };
 
   CHANNELS.forEach(ch => {
@@ -1187,22 +1457,44 @@ function xyY_to_XYZ(x, y, Y) {
 
 // ── TI3 Generator ──────────────────────────────────────────────────
 function generateTI3() {
+  const statusEl = document.getElementById('gen-status');
+
   // Walidacja obowiązkowych pól metadanych
   const desc    = v('prof_desc');
   const mfr     = v('disp_mfr');
   const model   = v('disp_model');
   if (!desc || !mfr || !model) {
-    const statusEl = document.getElementById('gen-status');
     statusEl.textContent = '✗ Uzupełnij pola: Nazwa profilu, Producent, Model (Krok 1)';
     statusEl.className = 'status-err';
+    switchTab(0);
     return;
   }
 
-  // Walidacja czy szarość ma chociaż dane x, y dla kroku 255 (white point)
-  if (meas['gray'][STEPS.length - 1].x === '' || meas['gray'][STEPS.length - 1].y === '') {
-    const statusEl = document.getElementById('gen-status');
-    statusEl.textContent = '✗ Brak danych x, y dla szarości 255 (biały punkt) — wymagane!';
+  // Walidacja: wszystkie kroki RGBW muszą mieć wypełnione x i y
+  const chLabels = { gray: 'Gray', r: 'Red', g: 'Green', b: 'Blue' };
+  let rgbwMissing = false;
+  for (const ch of CHANNELS) {
+    for (let i = 0; i < STEPS.length; i++) {
+      // krok 0 kanałów kolorowych = zawsze czarny z gray[0], pomijamy
+      if (ch !== 'gray' && i === 0) continue;
+      const row = meas[ch][i];
+      if (row.x === '' || row.x === undefined || row.y === '' || row.y === undefined) {
+        statusEl.textContent = `✗ Brak pomiarów RGBW — kanał ${chLabels[ch]}, krok ${STEPS[i]} — uzupełnij dane w zakładce „Pomiary"`;
+        statusEl.className = 'status-err';
+        switchTab(1);
+        switchCh(ch);
+        rgbwMissing = true;
+        break;
+      }
+    }
+    if (rgbwMissing) return;
+  }
+
+  // Walidacja: ColorChecker musi być wczytany
+  if (!ccMeas || ccMeas.length !== 24) {
+    statusEl.textContent = '✗ Brak danych ColorChecker — wczytaj 24 patche w zakładce „ColorChecker"';
     statusEl.className = 'status-err';
+    switchTab(3);
     return;
   }
   const serial  = v('disp_serial')|| '';
@@ -1268,6 +1560,23 @@ function generateTI3() {
     });
   });
 
+  // ColorChecker patches (required — validated above)
+  if (ccMeas && ccMeas.length === 24) {
+    ccMeas.forEach((m, i) => {
+      const [Xcc, Ycc, Zcc] = xyY_to_XYZ(m.x, m.y, m.Y);
+      // Use actual device RGB from measurement data (devR/G/B from 6-col input,
+      // or CC_RGB standard values when imported in 3-col mode)
+      const cr = m.devR, cg = m.devG, cb = m.devB;
+      const rn = (cr / 255 * 100).toFixed(4);
+      const gn = (cg / 255 * 100).toFixed(4);
+      const bn = (cb / 255 * 100).toFixed(4);
+      records.push(
+        `${String(sampleId).padStart(3)} ${rn.padStart(9)} ${gn.padStart(9)} ${bn.padStart(9)}  ${Xcc.toFixed(6).padStart(10)} ${Ycc.toFixed(6).padStart(10)} ${Zcc.toFixed(6).padStart(10)}`
+      );
+      sampleId++;
+    });
+  }
+
   const numSamples = records.length;
   const nowISO = new Date().toISOString().replace('T',' ').slice(0,19);
 
@@ -1317,7 +1626,8 @@ function generateTI3() {
   lines.push(``);
 
   // Luminance note
-  lines.push(`# NOTE: Y values in cd/m² from direct measurements. Fallback: gamma 2.2 approximation where Y not provided.`);
+  lines.push(`# NOTE: Y values in cd/m² from direct measurements for all channels and steps. Fallback: gamma 2.2 approximation where Y not provided.`);
+  lines.push(`# NOTE: ColorChecker 24 patches appended after primary R/G/B/Gray ramps. Device RGB from measurement input.`);
   lines.push(``);
 
   // LUMINANCE_XYZ — from gray ramp step 255 (white point absolute luminance)
@@ -1382,7 +1692,7 @@ function generateTI3() {
   // Render highlighted preview
   renderPreview(generatedTI3);
   document.getElementById('btn-download').disabled = false;
-  document.getElementById('gen-status').textContent = `✓ ${numSamples} próbek (${ACCURACY} kroków × 4 kanały) — gotowy do pobrania`;
+  document.getElementById('gen-status').textContent = `✓ ${numSamples} próbek (${ACCURACY} kroków × 4 kanały +24 ColorChecker) — gotowy do pobrania`;
   document.getElementById('gen-status').className = 'status-ok';
   updateCmdHints();
 }

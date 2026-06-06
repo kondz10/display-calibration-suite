@@ -959,6 +959,8 @@
   <nav class="tab-nav">
     <button class="tab-pill active" onclick="switchTab('single')">▸ Pojedynczy plik</button>
     <button class="tab-pill" onclick="switchTab('multi')">▸ Wiele plików</button>
+    <button class="tab-pill" onclick="switchTab('mmg')">▸ Pliki MMG</button>
+    <button class="tab-pill" onclick="switchTab('mmggroup')">▸ MMG grupowy</button>
   </nav>
 
   <!-- TAB: Single file -->
@@ -1091,7 +1093,7 @@
     <div class="multi-drop-zone" id="multiDropZone" onclick="document.getElementById('multiFileInput').click()">
       <span class="drop-icon">📂</span>
       <div class="drop-label">Przeciągnij pliki lub kliknij aby wczytać</div>
-      <div class="drop-hint">Max 8 plików · .txt .csv .spe .spd</div>
+      <div class="drop-hint">Max 16 plików · .txt .csv .spe .spd</div>
     </div>
     <input type="file" id="multiFileInput" accept=".txt,.csv,.spe,.spd" multiple style="display:none">
 
@@ -1106,6 +1108,9 @@
       <div class="sort-sep"></div>
       <button class="sort-btn" id="sortBtnManual" onclick="applySortMode('manual')">☰ Ręcznie</button>
       <span class="manual-hint" id="manualHint" style="display:none">↕ przeciągnij chipy</span>
+      <div class="sort-sep"></div>
+      <span class="sort-label" id="fileCountLabel" style="color:#5fc9aa"></span>
+      <button class="sort-btn" id="clearAllBtn" onclick="multiClearAll()" style="border-color:rgba(232,91,91,0.45);color:#e85b5b;" onmouseover="this.style.background='rgba(232,91,91,0.08)';this.style.borderColor='#e85b5b'" onmouseout="this.style.background='';this.style.borderColor='rgba(232,91,91,0.45)'">✕ Wyczyść</button>
     </div>
 
     <div class="file-chips" id="fileChips"></div>
@@ -1173,6 +1178,156 @@
     </div>
 
   </div><!-- /tab-multi -->
+
+  <!-- TAB: MMG files -->
+  <div class="tab-panel" id="tab-mmg">
+
+    <!-- Recent MMG files -->
+    <div class="recent-panel" id="recentMmgPanel">
+      <div class="recent-header">
+        <span class="recent-title">▸ Ostatnio otwarte pliki (MMG)</span>
+        <button class="recent-clear" onclick="clearRecentMmg()">✕ Wyczyść historię</button>
+      </div>
+      <div class="recent-list" id="recentMmgList"></div>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="multi-drop-zone" id="mmgDropZone" onclick="document.getElementById('mmgFileInput').click()">
+      <span class="drop-icon">📊</span>
+      <div class="drop-label">Przeciągnij pliki .mmg lub kliknij aby wczytać</div>
+      <div class="drop-hint">Max 16 plików · .mmg (GL SpectroSoft)</div>
+    </div>
+    <input type="file" id="mmgFileInput" accept=".mmg" multiple style="display:none">
+
+    <!-- Sort controls -->
+    <div class="sort-controls" id="mmgSortControls" style="display:none">
+      <span class="sort-label">Sortuj:</span>
+      <button class="sort-btn active" id="mmgSortBtnDateDesc" onclick="mmgApplySortMode('date-desc')">⬇ Data (najnowsze)</button>
+      <button class="sort-btn" id="mmgSortBtnDateAsc"  onclick="mmgApplySortMode('date-asc')">⬆ Data (najstarsze)</button>
+      <div class="sort-sep"></div>
+      <button class="sort-btn" id="mmgSortBtnNameAsc"  onclick="mmgApplySortMode('name-asc')">A→Z Nazwa</button>
+      <button class="sort-btn" id="mmgSortBtnNameDesc" onclick="mmgApplySortMode('name-desc')">Z→A Nazwa</button>
+      <div class="sort-sep"></div>
+      <button class="sort-btn" id="mmgSortBtnManual"   onclick="mmgApplySortMode('manual')">☰ Ręcznie</button>
+      <span class="manual-hint" id="mmgManualHint" style="display:none">↕ przeciągnij chipy</span>
+      <div class="sort-sep"></div>
+      <span class="sort-label" id="mmgFileCountLabel" style="color:#5fc9aa"></span>
+      <button class="sort-btn" onclick="mmgClearAll()" style="border-color:rgba(232,91,91,0.45);color:#e85b5b;" onmouseover="this.style.background='rgba(232,91,91,0.08)';this.style.borderColor='#e85b5b'" onmouseout="this.style.background='';this.style.borderColor='rgba(232,91,91,0.45)'">✕ Wyczyść</button>
+    </div>
+
+    <div class="file-chips" id="mmgFileChips"></div>
+
+    <!-- Copy panel MMG -->
+    <div class="copy-panel" id="mmgCopyPanel" style="display:none">
+      <div class="copy-panel-header">
+        <div class="panel-label" style="margin-bottom:0">▸ Kopiuj dane CIE xyY · format tabelaryczny</div>
+        <div class="copy-controls">
+          <span class="sort-badge" id="mmgSortBadge">⬇ data (najnowsze)</span>
+          <select class="copy-select" id="mmgChannelGrouping">
+            <option value="auto">Kanały auto (z nazwy pliku)</option>
+            <option value="single">Jeden blok (wszystkie pliki)</option>
+            <option value="R">Tylko Kanał R</option>
+            <option value="G">Tylko Kanał G</option>
+            <option value="B">Tylko Kanał B</option>
+            <option value="W">Tylko Kanał W</option>
+          </select>
+          <button class="btn-copy" id="mmgBtnCopy" onclick="mmgCopyTableData()">📋 Kopiuj</button>
+        </div>
+      </div>
+      <textarea class="copy-textarea" id="mmgCopyOutput" readonly placeholder="Wczytaj pliki .mmg aby wygenerować dane..."></textarea>
+      <div class="copy-info" id="mmgCopyInfo"></div>
+    </div>
+
+    <!-- Summary table MMG -->
+    <div class="multi-table-panel" id="mmgTablePanel" style="display:none">
+      <div class="panel-label">▸ Zestawienie pomiarów MMG</div>
+      <table class="mtable">
+        <thead>
+          <tr>
+            <th>Plik</th>
+            <th>Data/godzina</th>
+            <th>x (2°)</th>
+            <th>y (2°)</th>
+            <th>Y (2°) [cd/m²]</th>
+            <th>CCT [K]</th>
+            <th>Ra</th>
+            <th>λ dom.</th>
+            <th>λ szczyt.</th>
+            <th>Duv</th>
+            <th>Integracja [µs]</th>
+            <th>Temp. czujnika</th>
+          </tr>
+        </thead>
+        <tbody id="mmgTableBody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /tab-mmg -->
+
+  <!-- TAB: MMG grupowy (jeden plik z wieloma pomiarami) -->
+  <div class="tab-panel" id="tab-mmggroup">
+
+    <!-- Drop zone -->
+    <div class="multi-drop-zone" id="mmgGroupDropZone" onclick="document.getElementById('mmgGroupFileInput').click()">
+      <span class="drop-icon">📦</span>
+      <div class="drop-label">Przeciągnij plik .mmg lub kliknij aby wczytać</div>
+      <div class="drop-hint">Jeden plik z 8 lub 16 pomiarami · .mmg (GL SpectroSoft)</div>
+    </div>
+    <input type="file" id="mmgGroupFileInput" accept=".mmg" style="display:none">
+
+    <!-- Info bar -->
+    <div id="mmgGroupInfoBar" style="display:none;padding:6px 14px;font-family:var(--mono);font-size:0.7rem;color:var(--muted);display:none;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span id="mmgGroupFileName" style="color:var(--text)"></span>
+      <span id="mmgGroupCount" style="color:#5fc9aa"></span>
+      <button class="sort-btn" onclick="mmgGroupClear()" style="border-color:rgba(232,91,91,0.45);color:#e85b5b;" onmouseover="this.style.background='rgba(232,91,91,0.08)'" onmouseout="this.style.background=''">✕ Wyczyść</button>
+    </div>
+
+    <!-- Sort controls -->
+    <div class="sort-controls" id="mmgGroupSortControls" style="display:none">
+      <span class="sort-label">Sortuj:</span>
+      <button class="sort-btn active" id="mmgGrpBtnDateDesc" onclick="mmgGroupApplySort('date-desc')">⬇ Data (najnowsze)</button>
+      <button class="sort-btn" id="mmgGrpBtnDateAsc"  onclick="mmgGroupApplySort('date-asc')">⬆ Data (najstarsze)</button>
+      <div class="sort-sep"></div>
+      <button class="sort-btn" id="mmgGrpBtnIdxAsc"  onclick="mmgGroupApplySort('idx-asc')">1→N kolejność</button>
+      <button class="sort-btn" id="mmgGrpBtnIdxDesc" onclick="mmgGroupApplySort('idx-desc')">N→1 kolejność</button>
+    </div>
+
+    <!-- Copy panel -->
+    <div class="copy-panel" id="mmgGroupCopyPanel" style="display:none">
+      <div class="copy-panel-header">
+        <div class="panel-label" style="margin-bottom:0">▸ Kopiuj dane CIE xyY · format tabelaryczny</div>
+        <div class="copy-controls">
+          <button class="btn-copy" id="mmgGroupBtnCopy" onclick="mmgGroupCopyData()">📋 Kopiuj</button>
+        </div>
+      </div>
+      <textarea class="copy-textarea" id="mmgGroupCopyOutput" readonly placeholder="Wczytaj plik .mmg aby wygenerować dane..."></textarea>
+      <div class="copy-info" id="mmgGroupCopyInfo"></div>
+    </div>
+
+    <!-- Summary table -->
+    <div class="multi-table-panel" id="mmgGroupTablePanel" style="display:none">
+      <div class="panel-label">▸ Zestawienie pomiarów z pliku grupowego</div>
+      <table class="mtable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nazwa pomiaru</th>
+            <th>Data/godzina</th>
+            <th>x (2°)</th>
+            <th>y (2°)</th>
+            <th>Y (2°) [cd/m²]</th>
+            <th>CCT [K]</th>
+            <th>Ra</th>
+            <th>Duv</th>
+            <th>Integracja [µs]</th>
+            <th>Temp. czujnika [°C]</th>
+          </tr>
+        </thead>
+        <tbody id="mmgGroupTableBody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /tab-mmggroup -->
 
 </div>
 
@@ -2358,19 +2513,22 @@ window.addEventListener('resize', ()=>{
 
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
 function switchTab(name) {
+  const tabs = ['single','multi','mmg','mmggroup'];
   document.querySelectorAll('.tab-pill').forEach((btn,i)=>{
-    btn.classList.toggle('active', (i===0&&name==='single')||(i===1&&name==='multi'));
+    btn.classList.toggle('active', tabs[i]===name);
   });
-  document.getElementById('tab-single').classList.toggle('active', name==='single');
-  document.getElementById('tab-multi').classList.toggle('active',  name==='multi');
+  tabs.forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active', t===name);
+  });
   if(name==='multi' && multiFiles.length) drawMultiChart();
 }
 
 // ─── MULTI-FILE ───────────────────────────────────────────────────────────────
 const MULTI_COLORS = [
-  '#c06ae0','#e8915b','#5fc9aa','#e85b5b','#5599ff','#f0d060','#a0e060','#e060c0'
+  '#c06ae0','#e8915b','#5fc9aa','#e85b5b','#5599ff','#f0d060','#a0e060','#e060c0',
+  '#60c8e0','#e0a060','#80e080','#e06080','#a0a0ff','#e0d040','#60e0c0','#d060e0'
 ];
-const MAX_FILES = 8;
+const MAX_FILES = 16;
 let multiFiles = []; // [{name, points, meta, color}]
 let currentSortMode = 'date-desc'; // default: newest first
 
@@ -2489,6 +2647,9 @@ function renderMultiChips() {
   const chips = document.getElementById('fileChips');
   chips.innerHTML = '';
   const isManual = currentSortMode === 'manual';
+  // Update file counter
+  const counter = document.getElementById('fileCountLabel');
+  if(counter) counter.textContent = multiFiles.length ? `${multiFiles.length}/${MAX_FILES}` : '';
   multiFiles.forEach((file, idx)=>{
     const chip = document.createElement('div');
     chip.className = 'file-chip';
@@ -2676,6 +2837,19 @@ function multiRemoveFile(idx) {
   drawMultiChart();
   updateMultiTable();
   generateCopyData();
+  persistMultiFiles();
+}
+
+function multiClearAll() {
+  if(!multiFiles.length) return;
+  if(!confirm(`Usunąć wszystkie ${multiFiles.length} wczytane pliki?`)) return;
+  multiFiles = [];
+  document.getElementById('sortControls').style.display='none';
+  renderMultiChips();
+  drawMultiChart();
+  updateMultiTable();
+  generateCopyData();
+  persistMultiFiles();
 }
 
 function drawMultiChart() {
@@ -2933,6 +3107,8 @@ window.addEventListener('load', ()=>{
   renderRecentSingle();
   renderRecentMulti();
   restoreMultiSession();
+  mmgInitTab();
+  mmgGroupInitTab();
 });
 
 // ─── PERSISTENCE (localStorage) ──────────────────────────────────────────────
@@ -3094,6 +3270,540 @@ function restoreMultiSession() {
   currentSortMode = saved.sortMode || 'date-desc';
   applySortMode(currentSortMode);
   showRestoredBadge('multiDropZone');
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ─── MMG TAB ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+const MMG_COLORS = [
+  '#c06ae0','#e8915b','#5fc9aa','#e85b5b','#5599ff','#f0d060','#a0e060','#e060c0',
+  '#60c8e0','#e0a060','#80e080','#e06080','#a0a0ff','#e0d040','#60e0c0','#d060e0',
+  '#ff88aa','#88ffcc','#ffaa44','#44ddff','#bbff44','#ff44bb','#44bbff','#ffdd88',
+  '#99eeaa','#ee99cc','#77ccff','#ffcc77','#cc77ff','#77ffee','#ff7799','#aaccff'
+];
+const MMG_MAX_FILES = 32;
+let mmgFiles = []; // [{name, color, data:{x2,y2,Y2,cct,ra,domWl,peakWl,duv,integ,temp,date}}]
+let mmgSortMode = 'date-desc';
+
+const MMG_SORT_LABELS = {
+  'date-desc':'⬇ data (najnowsze)','date-asc':'⬆ data (najstarsze)',
+  'name-asc':'A→Z nazwa','name-desc':'Z→A nazwa','manual':'☰ ręcznie'
+};
+
+// ── Parse .mmg XML ────────────────────────────────────────────────────────────
+function parseMmg(xmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'text/xml');
+  if(doc.querySelector('parsererror')) return null;
+
+  function getResult(name) {
+    const el = doc.querySelector(`results parameter[name="${name}"]`);
+    return el ? el.textContent.trim() : null;
+  }
+  function getStatus(name) {
+    const el = doc.querySelector(`status parameter[name="${name}"]`);
+    return el ? el.textContent.trim() : null;
+  }
+
+  // Parse Polish decimal (comma as separator)
+  const pf = v => v ? parseFloat(v.replace(',','.')) : null;
+
+  const x2    = pf(getResult('x2'));
+  const y2    = pf(getResult('y2'));
+  const Y2    = pf(getResult('Y2'));      // cd/m²
+  const cct   = pf(getResult('CCT'));
+  const ra    = pf(getResult('Ra'));
+  const domWl = pf(getResult('ColDom'));
+  const peakWl= pf(getResult('ColPeak'));
+  const duv   = pf(getResult('Duv'));
+  const integ = pf(getStatus('integration_time'));
+  const temp  = pf(getStatus('temperature'));
+  const date  = getResult('measurement_time') || getStatus('date') || null;
+
+  return { x2, y2, Y2, cct, ra, domWl, peakWl, duv, integ, temp, date };
+}
+
+// ── Sort helpers ──────────────────────────────────────────────────────────────
+function mmgSortByMode(arr, mode) {
+  if(mode==='manual') return arr;
+  const s=[...arr];
+  if(mode==='date-desc') s.sort((a,b)=>{
+    const da=Date.parse(a.data.date||''), db=Date.parse(b.data.date||'');
+    if(!da&&!db) return 0; if(!da) return 1; if(!db) return -1; return db-da;
+  });
+  else if(mode==='date-asc') s.sort((a,b)=>{
+    const da=Date.parse(a.data.date||''), db=Date.parse(b.data.date||'');
+    if(!da&&!db) return 0; if(!da) return 1; if(!db) return -1; return da-db;
+  });
+  else if(mode==='name-asc') s.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(mode==='name-desc') s.sort((a,b)=>b.name.localeCompare(a.name));
+  return s;
+}
+
+function mmgApplySortMode(mode) {
+  mmgSortMode = mode;
+  const btnMap = {
+    'date-desc':'mmgSortBtnDateDesc','date-asc':'mmgSortBtnDateAsc',
+    'name-asc':'mmgSortBtnNameAsc','name-desc':'mmgSortBtnNameDesc','manual':'mmgSortBtnManual'
+  };
+  Object.values(btnMap).forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.remove('active','manual-active'); });
+  const ab=document.getElementById(btnMap[mode]);
+  if(ab) ab.classList.add(mode==='manual'?'manual-active':'active');
+  document.getElementById('mmgManualHint').style.display = mode==='manual'?'':'none';
+  const badge=document.getElementById('mmgSortBadge');
+  if(badge) badge.textContent = MMG_SORT_LABELS[mode]||mode;
+  if(mode!=='manual') mmgFiles = mmgSortByMode(mmgFiles, mode);
+  mmgRenderChips();
+  mmgUpdateTable();
+  mmgGenerateCopyData();
+}
+
+// ── Add files ─────────────────────────────────────────────────────────────────
+function mmgAddFiles(fileList) {
+  const remaining = MMG_MAX_FILES - mmgFiles.length;
+  const toLoad = Math.min(fileList.length, remaining);
+  if(toLoad<=0){ alert(`Osiągnięto limit ${MMG_MAX_FILES} plików MMG.`); return; }
+  let loaded=0;
+  for(let i=0;i<toLoad;i++){
+    const f=fileList[i];
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const data=parseMmg(ev.target.result);
+      if(!data){ loaded++; if(loaded===toLoad) mmgFinishLoad(); return; }
+      const usedColors=mmgFiles.map(x=>x.color);
+      const color=MMG_COLORS.find(c=>!usedColors.includes(c))||MMG_COLORS[mmgFiles.length%MMG_COLORS.length];
+      mmgFiles.push({name:f.name, color, data});
+      loaded++;
+      if(loaded===toLoad) mmgFinishLoad();
+    };
+    reader.readAsText(f,'UTF-8');
+  }
+}
+
+function mmgFinishLoad() {
+  if(mmgSortMode!=='manual') mmgFiles=mmgSortByMode(mmgFiles, mmgSortMode);
+  document.getElementById('mmgSortControls').style.display='';
+  mmgRenderChips();
+  mmgUpdateTable();
+  mmgGenerateCopyData();
+  mmgPersist();
+}
+
+// ── Chips ─────────────────────────────────────────────────────────────────────
+let mmgDragSrcIdx=null;
+
+function mmgRenderChips() {
+  const chips=document.getElementById('mmgFileChips');
+  chips.innerHTML='';
+  const isManual=mmgSortMode==='manual';
+  const counter=document.getElementById('mmgFileCountLabel');
+  if(counter) counter.textContent=mmgFiles.length?`${mmgFiles.length}/${MMG_MAX_FILES}`:'';
+  mmgFiles.forEach((f,idx)=>{
+    const chip=document.createElement('div');
+    chip.className='file-chip';
+    chip.dataset.idx=idx;
+    if(isManual){
+      chip.draggable=true;
+      chip.addEventListener('dragstart',mmgOnDragStart);
+      chip.addEventListener('dragover', mmgOnDragOver);
+      chip.addEventListener('dragleave',mmgOnDragLeave);
+      chip.addEventListener('drop',     mmgOnDrop);
+      chip.addEventListener('dragend',  mmgOnDragEnd);
+    }
+    const dt=f.data.date?f.data.date.replace('T',' ').substring(0,16):'';
+    chip.innerHTML=`
+      ${isManual?'<span class="chip-drag-handle" title="Przeciągnij aby zmienić kolejność">⠿</span>':''}
+      <span class="chip-dot" style="background:${f.color}"></span>
+      <span class="chip-name" title="${f.name}">${f.name}</span>
+      <span class="chip-date" style="font-family:'Share Tech Mono',monospace;font-size:0.58rem;color:var(--muted);margin-left:2px;opacity:0.7">${dt}</span>
+      <span class="chip-remove" onclick="mmgRemoveFile(${idx})" title="Usuń">✕</span>
+    `;
+    chips.appendChild(chip);
+  });
+  document.getElementById('mmgSortControls').style.display=mmgFiles.length?'':'none';
+}
+
+function mmgRemoveFile(idx){
+  mmgFiles.splice(idx,1);
+  if(!mmgFiles.length) document.getElementById('mmgSortControls').style.display='none';
+  mmgRenderChips(); mmgUpdateTable(); mmgGenerateCopyData(); mmgPersist();
+}
+
+function mmgClearAll(){
+  if(!mmgFiles.length) return;
+  if(!confirm(`Usunąć wszystkie ${mmgFiles.length} wczytane pliki MMG?`)) return;
+  mmgFiles=[];
+  document.getElementById('mmgSortControls').style.display='none';
+  mmgRenderChips(); mmgUpdateTable(); mmgGenerateCopyData(); mmgPersist();
+}
+
+// Drag & drop chip reorder
+function mmgOnDragStart(e){ mmgDragSrcIdx=parseInt(this.dataset.idx); this.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; }
+function mmgOnDragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; this.classList.add('drag-over-chip'); }
+function mmgOnDragLeave(){ this.classList.remove('drag-over-chip'); }
+function mmgOnDrop(e){
+  e.preventDefault(); this.classList.remove('drag-over-chip');
+  const ti=parseInt(this.dataset.idx);
+  if(mmgDragSrcIdx===null||mmgDragSrcIdx===ti) return;
+  const moved=mmgFiles.splice(mmgDragSrcIdx,1)[0];
+  mmgFiles.splice(ti,0,moved);
+  mmgDragSrcIdx=null;
+  mmgRenderChips(); mmgUpdateTable(); mmgGenerateCopyData();
+}
+function mmgOnDragEnd(){ mmgDragSrcIdx=null; document.querySelectorAll('#mmgFileChips .file-chip').forEach(c=>c.classList.remove('dragging','drag-over-chip')); }
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+function mmgUpdateTable(){
+  const tbody=document.getElementById('mmgTableBody');
+  const panel=document.getElementById('mmgTablePanel');
+  const copyPanel=document.getElementById('mmgCopyPanel');
+  tbody.innerHTML='';
+  if(!mmgFiles.length){ panel.style.display='none'; copyPanel.style.display='none'; return; }
+  panel.style.display='block'; copyPanel.style.display='block';
+  mmgFiles.forEach(f=>{
+    const d=f.data;
+    const fmt=(v,dec=4)=>v!=null?v.toFixed(dec):'—';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><div class="swatch-cell"><span class="chip-dot" style="background:${f.color}"></span><span class="dim">${f.name}</span></div></td>
+      <td class="mono" style="font-size:0.65rem;color:var(--muted)">${d.date?d.date.replace('T',' ').substring(0,16):'—'}</td>
+      <td class="mono" style="color:#5fc9aa">${fmt(d.x2,4)}</td>
+      <td class="mono" style="color:#5fc9aa">${fmt(d.y2,4)}</td>
+      <td class="mono" style="color:var(--accent);font-weight:600">${d.Y2!=null?d.Y2.toFixed(2)+' cd/m²':'—'}</td>
+      <td class="mono">${d.cct!=null?Math.round(d.cct)+' K':'—'}</td>
+      <td class="dim">${d.ra!=null?d.ra.toFixed(1):'—'}</td>
+      <td class="mono">${d.domWl!=null?d.domWl.toFixed(1)+' nm':'—'}</td>
+      <td class="mono">${d.peakWl!=null?d.peakWl.toFixed(2)+' nm':'—'}</td>
+      <td class="dim" style="color:${d.duv!=null&&Math.abs(d.duv)>0.006?'#e85b5b':'var(--muted)'}">${d.duv!=null?d.duv.toFixed(4):'—'}</td>
+      <td class="dim">${d.integ!=null?d.integ.toFixed(1)+' µs':'—'}</td>
+      <td class="dim">${d.temp!=null?d.temp.toFixed(2)+' °C':'—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  mmgGenerateCopyData();
+}
+
+// ── Copy data ─────────────────────────────────────────────────────────────────
+function mmgGenerateCopyData(){
+  if(!mmgFiles.length) return;
+  const grouping=document.getElementById('mmgChannelGrouping').value;
+  const entries=mmgFiles.map(f=>({
+    cx:f.data.x2, cy:f.data.y2, L:f.data.Y2,
+    ch:detectChannel(f.name), name:f.name, dt:f.data.date||''
+  }));
+  const fmt=(v,dec=4)=>{ if(v==null) return '—'; let s=v.toFixed(dec); s=s.replace(/\.?0+$/,''); return s; };
+  let output='';
+  if(grouping==='single'){
+    output=entries.map(e=>`${fmt(e.cx)}\t${fmt(e.cy)}\t${fmt(e.L,2)}`).join('\n');
+  } else if(grouping!=='auto'){
+    const filtered=entries.filter(e=>e.ch===grouping||!e.ch);
+    output=`# Kanał ${grouping}\n`+filtered.map(e=>`${fmt(e.cx)}\t${fmt(e.cy)}\t${fmt(e.L,2)}`).join('\n');
+  } else {
+    const channels=['R','G','B','W'];
+    const byChannel={}; const unknown=[];
+    channels.forEach(c=>byChannel[c]=[]);
+    for(const e of entries){ if(e.ch&&byChannel[e.ch]) byChannel[e.ch].push(e); else unknown.push(e); }
+    const hasAny=channels.some(c=>byChannel[c].length>0);
+    if(hasAny){
+      channels.forEach(c=>{ if(byChannel[c].length){ output+=`# Kanał ${c}\n`+byChannel[c].map(e=>`${fmt(e.cx)}\t${fmt(e.cy)}\t${fmt(e.L,2)}`).join('\n')+'\n'; } });
+      if(unknown.length){ output+=`# Pozostałe\n`+unknown.map(e=>`${fmt(e.cx)}\t${fmt(e.cy)}\t${fmt(e.L,2)}`).join('\n')+'\n'; }
+    } else {
+      output=entries.map(e=>`${fmt(e.cx)}\t${fmt(e.cy)}\t${fmt(e.L,2)}`).join('\n');
+    }
+    output=output.trim();
+  }
+  document.getElementById('mmgCopyOutput').value=output;
+  document.getElementById('mmgCopyInfo').textContent=`${entries.length} pomiar(y) · ${MMG_SORT_LABELS[mmgSortMode]||mmgSortMode} · format: x(CIE 2°)\ty(CIE 2°)\tY [cd/m²]`;
+}
+
+function mmgCopyTableData(){
+  const ta=document.getElementById('mmgCopyOutput');
+  if(!ta.value.trim()) return;
+  navigator.clipboard.writeText(ta.value).then(()=>{
+    const btn=document.getElementById('mmgBtnCopy');
+    btn.textContent='✓ Skopiowano!'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='📋 Kopiuj'; btn.classList.remove('copied'); },2000);
+  }).catch(()=>{ ta.select(); document.execCommand('copy'); });
+}
+
+// ── Persistence (localStorage) ────────────────────────────────────────────────
+const LS_MMG_KEY    = 'sa_mmg_files';
+const LS_MMG_RECENT = 'sa_mmg_recent';
+
+function mmgPersist(){
+  try { lsSave(LS_MMG_KEY,{files:mmgFiles.map(f=>({name:f.name,color:f.color,data:f.data})),sortMode:mmgSortMode,savedAt:new Date().toISOString()}); } catch(e){}
+  let recent=lsLoad(LS_MMG_RECENT)||[];
+  mmgFiles.forEach(f=>{
+    recent=recent.filter(r=>r.name!==f.name);
+    recent.unshift({name:f.name,color:f.color,data:f.data,savedAt:new Date().toISOString()});
+  });
+  if(recent.length>MAX_RECENT) recent=recent.slice(0,MAX_RECENT);
+  lsSave(LS_MMG_RECENT,recent);
+  renderRecentMmg();
+}
+
+function renderRecentMmg(){
+  const recent=lsLoad(LS_MMG_RECENT)||[];
+  const list=document.getElementById('recentMmgList');
+  if(!list) return;
+  if(!recent.length){ list.innerHTML='<span class="recent-empty">Brak historii — wczytaj pliki .mmg aby je zapamiętać</span>'; return; }
+  list.innerHTML='';
+  recent.forEach((item,idx)=>{
+    const chip=document.createElement('div');
+    chip.className='recent-chip';
+    const dt=item.savedAt?item.savedAt.replace('T',' ').substring(0,16):'';
+    const alreadyLoaded=!!mmgFiles.find(f=>f.name===item.name);
+    chip.innerHTML=`
+      <span class="rc-icon" style="color:${item.color}">◉</span>
+      <span class="rc-name" title="${item.name}">${item.name}</span>
+      <span class="rc-date">${dt}</span>
+      ${alreadyLoaded?'<span style="font-family:Share Tech Mono,monospace;font-size:0.55rem;color:#5fc9aa;opacity:0.7">✓</span>':''}
+      <span class="rc-remove" title="Usuń z historii" onclick="removeRecentMmg(${idx},event)">✕</span>
+    `;
+    if(!alreadyLoaded){
+      chip.addEventListener('click',(e)=>{
+        if(e.target.classList.contains('rc-remove')) return;
+        if(mmgFiles.length>=MMG_MAX_FILES){ alert(`Osiągnięto limit ${MMG_MAX_FILES} plików.`); return; }
+        const usedColors=mmgFiles.map(x=>x.color);
+        const color=MMG_COLORS.find(c=>!usedColors.includes(c))||item.color;
+        mmgFiles.push({name:item.name,color,data:item.data});
+        if(mmgSortMode!=='manual') mmgFiles=mmgSortByMode(mmgFiles,mmgSortMode);
+        document.getElementById('mmgSortControls').style.display='';
+        mmgRenderChips(); mmgUpdateTable(); mmgGenerateCopyData(); mmgPersist();
+        showRestoredBadge('mmgDropZone');
+      });
+    } else {
+      chip.style.opacity='0.55'; chip.style.cursor='default'; chip.title='Ten plik jest już wczytany';
+    }
+    list.appendChild(chip);
+  });
+}
+
+function removeRecentMmg(idx,e){
+  e.stopPropagation();
+  let recent=lsLoad(LS_MMG_RECENT)||[];
+  recent.splice(idx,1);
+  lsSave(LS_MMG_RECENT,recent);
+  renderRecentMmg();
+}
+
+function clearRecentMmg(){
+  lsSave(LS_MMG_RECENT,[]);
+  lsSave(LS_MMG_KEY,null);
+  renderRecentMmg();
+}
+
+function mmgRestoreSession(){
+  const saved=lsLoad(LS_MMG_KEY);
+  if(!saved||!saved.files||!saved.files.length) return;
+  mmgFiles=saved.files.map(f=>({name:f.name,color:f.color,data:f.data}));
+  mmgSortMode=saved.sortMode||'date-desc';
+  mmgApplySortMode(mmgSortMode);
+  showRestoredBadge('mmgDropZone');
+}
+
+// ── Init MMG ──────────────────────────────────────────────────────────────────
+function mmgInitTab(){
+  const mmgZone=document.getElementById('mmgDropZone');
+  mmgZone.addEventListener('dragover',e=>{ e.preventDefault(); mmgZone.classList.add('drag-over'); });
+  mmgZone.addEventListener('dragleave',()=>mmgZone.classList.remove('drag-over'));
+  mmgZone.addEventListener('drop',e=>{ e.preventDefault(); mmgZone.classList.remove('drag-over'); mmgAddFiles(e.dataTransfer.files); });
+  document.getElementById('mmgFileInput').addEventListener('change',e=>{ if(e.target.files.length) mmgAddFiles(e.target.files); e.target.value=''; });
+  document.getElementById('mmgChannelGrouping').addEventListener('change',()=>mmgGenerateCopyData());
+  renderRecentMmg();
+  mmgRestoreSession();
+}
+
+// ─── MMG GRUPOWY TAB ─────────────────────────────────────────────────────────
+// Jeden plik .mmg zawierający wiele bloków <measurement>
+
+let mmgGroupRows = [];      // [{idx, name, date, x2, y2, Y2, cct, ra, duv, integ, temp}]
+let mmgGroupSortMode = 'date-desc';
+let mmgGroupFileName = '';
+
+const MMGGRP_SORT_LABELS = {
+  'date-desc':'⬇ data (najnowsze)','date-asc':'⬆ data (najstarsze)',
+  'idx-asc':'1→N kolejność','idx-desc':'N→1 kolejność'
+};
+
+// Parse wszystkich <measurement> z jednego pliku .mmg
+function parseMmgGroup(xmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'text/xml');
+  if(doc.querySelector('parsererror')) return null;
+
+  const measurements = doc.querySelectorAll('measurement');
+  if(!measurements.length) return null;
+
+  const pf = v => v ? parseFloat(v.replace(',','.')) : null;
+  const rows = [];
+
+  measurements.forEach((meas, idx) => {
+    function getResult(name) {
+      const el = meas.querySelector(`results parameter[name="${name}"]`);
+      return el ? el.textContent.trim() : null;
+    }
+    function getStatus(name) {
+      const el = meas.querySelector(`status parameter[name="${name}"]`);
+      return el ? el.textContent.trim() : null;
+    }
+
+    const name  = getResult('name') || getStatus('date') || `Pomiar ${idx+1}`;
+    const date  = getResult('measurement_time') || getStatus('date') || null;
+    const x2    = pf(getResult('x2'));
+    const y2    = pf(getResult('y2'));
+    const Y2    = pf(getResult('Y2'));
+    const cct   = pf(getResult('CCT'));
+    const ra    = pf(getResult('Ra'));
+    const duv   = pf(getResult('Duv'));
+    const integ = pf(getStatus('integration_time'));
+    const temp  = pf(getStatus('temperature'));
+
+    rows.push({ idx, name, date, x2, y2, Y2, cct, ra, duv, integ, temp });
+  });
+
+  return rows;
+}
+
+function mmgGroupSortRows(arr, mode) {
+  const s = [...arr];
+  if(mode === 'date-desc') s.sort((a,b) => {
+    const da = Date.parse(a.date||''), db = Date.parse(b.date||'');
+    if(!da&&!db) return 0; if(!da) return 1; if(!db) return -1; return db-da;
+  });
+  else if(mode === 'date-asc') s.sort((a,b) => {
+    const da = Date.parse(a.date||''), db = Date.parse(b.date||'');
+    if(!da&&!db) return 0; if(!da) return 1; if(!db) return -1; return da-db;
+  });
+  else if(mode === 'idx-asc')  s.sort((a,b) => a.idx - b.idx);
+  else if(mode === 'idx-desc') s.sort((a,b) => b.idx - a.idx);
+  return s;
+}
+
+function mmgGroupApplySort(mode) {
+  mmgGroupSortMode = mode;
+  const btnMap = {
+    'date-desc':'mmgGrpBtnDateDesc','date-asc':'mmgGrpBtnDateAsc',
+    'idx-asc':'mmgGrpBtnIdxAsc','idx-desc':'mmgGrpBtnIdxDesc'
+  };
+  Object.values(btnMap).forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('active','manual-active');
+  });
+  const ab = document.getElementById(btnMap[mode]);
+  if(ab) ab.classList.add('active');
+  mmgGroupRows = mmgGroupSortRows(mmgGroupRows, mode);
+  mmgGroupRenderTable();
+  mmgGroupGenerateCopy();
+}
+
+function mmgGroupLoadFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const rows = parseMmgGroup(ev.target.result);
+    if(!rows || !rows.length) {
+      alert('Nie znaleziono pomiarów w pliku .mmg');
+      return;
+    }
+    mmgGroupFileName = file.name;
+    mmgGroupRows = mmgGroupSortRows(rows, mmgGroupSortMode);
+    mmgGroupRenderUI();
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function mmgGroupRenderUI() {
+  // Info bar
+  const infoBar = document.getElementById('mmgGroupInfoBar');
+  infoBar.style.display = 'flex';
+  document.getElementById('mmgGroupFileName').textContent = mmgGroupFileName;
+  document.getElementById('mmgGroupCount').textContent = `${mmgGroupRows.length} pomiarów`;
+  // Sort controls
+  document.getElementById('mmgGroupSortControls').style.display = '';
+  mmgGroupRenderTable();
+  mmgGroupGenerateCopy();
+}
+
+function mmgGroupRenderTable() {
+  const tbody = document.getElementById('mmgGroupTableBody');
+  const panel = document.getElementById('mmgGroupTablePanel');
+  const copyPanel = document.getElementById('mmgGroupCopyPanel');
+  tbody.innerHTML = '';
+  if(!mmgGroupRows.length) {
+    panel.style.display = 'none';
+    copyPanel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+  copyPanel.style.display = 'block';
+
+  const fmt = (v, dec=4) => v != null ? v.toFixed(dec) : '—';
+
+  mmgGroupRows.forEach((r, i) => {
+    const dt = r.date ? r.date.replace('T',' ').substring(0,19) : '—';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono" style="color:var(--muted)">${i+1}</td>
+      <td class="dim" style="font-size:0.65rem">${r.name}</td>
+      <td class="mono" style="font-size:0.65rem;color:var(--muted)">${dt}</td>
+      <td class="mono" style="color:#5fc9aa">${fmt(r.x2,4)}</td>
+      <td class="mono" style="color:#5fc9aa">${fmt(r.y2,4)}</td>
+      <td class="mono" style="color:var(--accent);font-weight:600">${r.Y2!=null?r.Y2.toFixed(2)+' cd/m²':'—'}</td>
+      <td class="mono">${r.cct!=null?Math.round(r.cct)+' K':'—'}</td>
+      <td class="dim">${r.ra!=null?r.ra.toFixed(1):'—'}</td>
+      <td class="dim" style="color:${r.duv!=null&&Math.abs(r.duv)>0.006?'#e85b5b':'var(--muted)'}">${r.duv!=null?r.duv.toFixed(4):'—'}</td>
+      <td class="dim">${r.integ!=null?r.integ.toFixed(1)+' µs':'—'}</td>
+      <td class="dim">${r.temp!=null?r.temp.toFixed(2)+' °C':'—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function mmgGroupGenerateCopy() {
+  if(!mmgGroupRows.length) return;
+  const fmt = (v, dec=4) => { if(v==null) return '—'; let s=v.toFixed(dec); s=s.replace(/\.?0+$/,''); return s; };
+  const lines = mmgGroupRows.map(r => `${fmt(r.x2)}\t${fmt(r.y2)}\t${fmt(r.Y2,2)}`);
+  document.getElementById('mmgGroupCopyOutput').value = lines.join('\n');
+  document.getElementById('mmgGroupCopyInfo').textContent =
+    `${mmgGroupRows.length} pomiar(y) · ${MMGGRP_SORT_LABELS[mmgGroupSortMode]} · format: x(CIE 2°)\ty(CIE 2°)\tY [cd/m²]`;
+}
+
+function mmgGroupCopyData() {
+  const ta = document.getElementById('mmgGroupCopyOutput');
+  if(!ta.value.trim()) return;
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = document.getElementById('mmgGroupBtnCopy');
+    btn.textContent = '✓ Skopiowano!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Kopiuj'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => { ta.select(); document.execCommand('copy'); });
+}
+
+function mmgGroupClear() {
+  mmgGroupRows = [];
+  mmgGroupFileName = '';
+  document.getElementById('mmgGroupFileInput').value = '';
+  document.getElementById('mmgGroupInfoBar').style.display = 'none';
+  document.getElementById('mmgGroupSortControls').style.display = 'none';
+  document.getElementById('mmgGroupTablePanel').style.display = 'none';
+  document.getElementById('mmgGroupCopyPanel').style.display = 'none';
+  document.getElementById('mmgGroupTableBody').innerHTML = '';
+}
+
+function mmgGroupInitTab() {
+  const zone = document.getElementById('mmgGroupDropZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if(f) mmgGroupLoadFile(f);
+  });
+  document.getElementById('mmgGroupFileInput').addEventListener('change', e => {
+    if(e.target.files[0]) mmgGroupLoadFile(e.target.files[0]);
+    e.target.value = '';
+  });
 }
 
 function showRestoredBadge(nearId) {

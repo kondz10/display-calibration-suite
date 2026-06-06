@@ -102,6 +102,26 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:28px}
 .chart-wrap{position:relative;width:100%;height:420px}
 .gc-info{font-family:var(--sans);font-size:14px;color:var(--muted);line-height:1.7;letter-spacing:0.5px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* IMPORT */
+.import-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:28px}
+.import-title{font-family:var(--mono);font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:14px}
+.import-area{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
+.import-textarea{width:100%;min-height:130px;background:var(--bg);border:1px solid #1e1e1e;border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:11px;color:var(--text);outline:none;resize:vertical;transition:border-color 0.15s;letter-spacing:0.5px;line-height:1.7}
+.import-textarea:focus{border-color:var(--accent)}
+.import-textarea::placeholder{color:var(--muted);opacity:0.7}
+.import-actions{display:flex;flex-direction:column;gap:8px}
+.btn-import{background:transparent;border:1px solid var(--accent);border-radius:8px;color:var(--accent);font-family:var(--mono);font-size:11px;letter-spacing:2px;padding:10px 16px;cursor:pointer;text-transform:uppercase;transition:all 0.18s;position:relative;overflow:hidden;white-space:nowrap}
+.btn-import::before{content:'';position:absolute;inset:0;background:var(--accent);transform:translateX(-100%);transition:transform 0.18s;z-index:0}
+.btn-import:hover::before{transform:translateX(0)}
+.btn-import:hover{color:#fff}
+.btn-import span{position:relative;z-index:1}
+.btn-import-clear{background:transparent;border:1px solid #2a2a2a;border-radius:8px;color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:2px;padding:10px 16px;cursor:pointer;text-transform:uppercase;transition:all 0.15s}
+.btn-import-clear:hover{border-color:#444;color:var(--text)}
+.import-hint{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;line-height:1.6;margin-top:8px}
+.import-status{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;margin-top:8px;padding:6px 10px;border-radius:4px;display:none}
+.import-status.ok{display:block;color:#33ff33;background:rgba(51,255,51,0.06);border:1px solid rgba(51,255,51,0.2)}
+.import-status.err{display:block;color:#ff4444;background:rgba(255,68,68,0.06);border:1px solid rgba(255,68,68,0.2)}
 </style>
 
 <div class="app"><div class="inner"><div class="two-col"><div class="main-col">
@@ -147,6 +167,23 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div class="deviation-box" id="dev-box">
       <div class="dev-title">Odchyły zmierzonej gammy względem celu (Δγ na poziom)</div>
       <div class="dev-grid" id="dev-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT -->
+<div class="sec">Import danych pomiarowych</div>
+<div class="import-block">
+  <div class="import-title">Wklej dane — format: x &nbsp;y &nbsp;L (kolumna 3 = luminancja cd/m²)</div>
+  <div class="import-area">
+    <div>
+      <textarea class="import-textarea" id="import-textarea" placeholder="0.2225&#9;0.2158&#9;0.25&#10;0.3077&#9;0.3180&#9;2.82&#10;0.3045&#9;0.3153&#9;12.35&#10;..."></textarea>
+      <div class="import-hint">Separator: Tab lub spacja · Ignoruje kolumny 1 i 2 · Wiersze uzupełniane od zera (poziom 0 pomijany)</div>
+      <div class="import-status" id="import-status"></div>
+    </div>
+    <div class="import-actions">
+      <button class="btn-import" onclick="importData()"><span>▶ Importuj</span></button>
+      <button class="btn-import-clear" onclick="clearImport()">✕ Wyczyść</button>
     </div>
   </div>
 </div>
@@ -426,6 +463,72 @@ function redrawChart(){
       }
     }
   });
+}
+
+/* ── IMPORT ── */
+function importData() {
+  const raw = document.getElementById('import-textarea').value.trim();
+  if (!raw) { showImportStatus('err', 'Brak danych do importu.'); return; }
+
+  // Parse lines — ignore empty
+  const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+  // Extract 3rd column (luminance). If only 1 column — take it directly.
+  const luminances = [];
+  let parseErrors = 0;
+  for (const line of lines) {
+    const parts = line.split(/[\t ]+/);
+    const colIdx = parts.length >= 3 ? 2 : parts.length >= 1 ? 0 : -1;
+    if (colIdx < 0) { parseErrors++; continue; }
+    const L = parseFloat(parts[colIdx].replace(',', '.'));
+    if (isNaN(L) || L < 0) { parseErrors++; continue; }
+    luminances.push(L);
+  }
+
+  if (luminances.length === 0) {
+    showImportStatus('err', 'Nie znaleziono wartości luminancji. Sprawdź format danych.');
+    return;
+  }
+
+  // Auto-select mode: 8 rows → 8 pkt, >8 rows → 16 pkt
+  // levels(8)  = [0, 36, 73, 109, 146, 182, 219, 255]       — 8 poziomów
+  // levels(16) = [0, 17, 34, ..., 255]                       — 16 poziomów
+  const targetMode = luminances.length <= 8 ? 8 : 16;
+  if (targetMode !== mode) setMode(targetMode);
+
+  const targetLvls = levels(targetMode); // includes level 0
+
+  // Clear all fields
+  for (const v of targetLvls) {
+    const el = document.getElementById('lum-' + v);
+    if (el) el.value = '';
+  }
+
+  // Fill positionally: luminances[0] → level 0, luminances[1] → level 1, etc.
+  let filled = 0;
+  for (let i = 0; i < targetLvls.length && i < luminances.length; i++) {
+    const el = document.getElementById('lum-' + targetLvls[i]);
+    if (el) { el.value = luminances[i]; filled++; }
+  }
+
+  updateSwatches(wzorGamma);
+
+  let msg = `Zaimportowano ${filled} wartości → tryb ${targetMode} pkt.`;
+  if (parseErrors > 0) msg += ` Pominięto ${parseErrors} błędnych wierszy.`;
+  showImportStatus('ok', msg);
+}
+
+function clearImport() {
+  document.getElementById('import-textarea').value = '';
+  const s = document.getElementById('import-status');
+  s.className = 'import-status';
+  s.textContent = '';
+}
+
+function showImportStatus(type, msg) {
+  const el = document.getElementById('import-status');
+  el.className = 'import-status ' + type;
+  el.textContent = msg;
 }
 
 buildTargetPills();
