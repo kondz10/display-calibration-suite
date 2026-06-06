@@ -1938,7 +1938,7 @@ function xyYtoRGBgain(x, y, Y) {
 }
 
 function renderRGBTracking() {
-  const validIndices = [0,1,2,3,4,5,6,7];
+  const validIndices = LEVELS.map((_, i) => i);
   const labels = validIndices.map(i => LEVELS[i]);
 
   // Oblicz gain dla każdego poziomu kanału W
@@ -2110,8 +2110,8 @@ function renderRGBTracking() {
 function renderGrayscale() {
   const wRes = getChannelResults('W');
 
-  // Levels 1–7 (indices 1–7, skip index 0 = level 0)
-  const validIndices = [1,2,3,4,5,6,7];
+  // Skip index 0 (level 0); use all remaining levels for the selected scale
+  const validIndices = LEVELS.map((_, i) => i).filter(i => i > 0);
   const labels = validIndices.map(i => LEVELS[i]);
 
   // ── Chart 1: Δx and Δy tracking ──────────────────────────────────────────
@@ -2767,16 +2767,16 @@ if (hadSaved) {
 (function syncPrecisionUI() {
   const n = precision;
   const btn8  = document.getElementById('btn8');
+  const btn10 = document.getElementById('btn10');
   const btn16 = document.getElementById('btn16');
   if (btn8)  btn8.classList.toggle('prec-active',  n === 8);
+  if (btn10) btn10.classList.toggle('prec-active', n === 10);
   if (btn16) btn16.classList.toggle('prec-active', n === 16);
-  const hints8  = '8 punktów: poziomy 0 · 36 · 73 · 109 · 146 · 182 · 219 · 255';
-  const hints16 = '16 punktów: poziomy 0 · 17 · 34 · 51 · 68 · 85 · 102 · 119 · 136 · 153 · 170 · 187 · 204 · 221 · 238 · 255';
   const ph = document.getElementById('precHint');
   const paste = document.getElementById('pasteHint');
   const ipc = document.getElementById('infoPointCount');
   const ilvl = document.getElementById('infoLevels');
-  if (ph)   ph.textContent   = n === 16 ? hints16 : hints8;
+  if (ph)   ph.textContent   = `${n} punktów: poziomy ${LEVELS.join(' · ')}`;
   if (paste) paste.textContent = `→ ${n} wierszy dla aktualnie wybranego kanału. Separatory: spacja, tab, przecinek lub średnik.`;
   if (ipc)  ipc.textContent  = n;
   if (ilvl) ilvl.textContent  = LEVELS.join(', ');
