@@ -888,6 +888,7 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
       <div class="paste-label">Dokładność pomiarów</div>
       <div style="display:flex;gap:0;margin-top:6px">
         <button id="btn8"  class="prec-btn prec-active" onclick="setPrecision(8)">8 pomiarów</button>
+        <button id="btn10" class="prec-btn"             onclick="setPrecision(10)">10 pomiarów</button>
         <button id="btn16" class="prec-btn"             onclick="setPrecision(16)">16 pomiarów</button>
       </div>
       <div class="paste-hint" id="precHint">8 punktów: poziomy 0 · 36 · 73 · 109 · 146 · 182 · 219 · 255</div>
@@ -1178,6 +1179,7 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
 
 <script>
 const LEVELS_8  = ['0','36','73','109','146','182','219','255'];
+const LEVELS_10 = ['0','28','57','85','113','142','170','198','227','255'];
 const LEVELS_16 = ['0','17','34','51','68','85','102','119','136','153','170','187','204','221','238','255'];
 const LEVEL_PCT_8  = [0, 6.7, 13.3, 20.0, 26.7, 33.3, 40.0, 46.7, 53.3, 60.0, 66.7, 73.3, 80.0, 86.7, 93.3, 100];
 const LEVEL_PCT_16 = [0, 6.7, 13.3, 20.0, 26.7, 33.3, 40.0, 46.7, 53.3, 60.0, 66.7, 73.3, 80.0, 86.7, 93.3, 100];
@@ -1220,14 +1222,12 @@ function loadFromStorage() {
     const savedData      = saved.data || saved;
     const savedPrecision = saved.precision || 8;
 
-    if (savedPrecision !== 8 && savedPrecision !== 16) return false;
+    if (savedPrecision !== 8 && savedPrecision !== 10 && savedPrecision !== 16) return false;
 
     // Apply precision first (silently, no confirm)
     precision = savedPrecision;
-    LEVELS    = savedPrecision === 16 ? LEVELS_16.slice() : LEVELS_8.slice();
-    LEVEL_PCT = savedPrecision === 16
-      ? [0,6.7,13.3,20.0,26.7,33.3,40.0,46.7,53.3,60.0,66.7,73.3,80.0,86.7,93.3,100]
-      : [0,14.1,28.6,42.7,57.3,71.4,85.9,100];
+    LEVELS    = savedPrecision === 16 ? LEVELS_16.slice() : savedPrecision === 10 ? LEVELS_10.slice() : LEVELS_8.slice();
+    LEVEL_PCT = LEVELS.map(v => Math.round(Number(v) / 255 * 1000) / 10);
 
     CHANNELS.forEach(ch => {
       if (savedData[ch] && Array.isArray(savedData[ch]) && savedData[ch].length === LEVELS.length) {
@@ -1457,19 +1457,17 @@ function setPrecision(n) {
   }
 
   precision = n;
-  LEVELS    = n === 16 ? LEVELS_16.slice() : LEVELS_8.slice();
-  LEVEL_PCT = n === 16
-    ? [0,6.7,13.3,20.0,26.7,33.3,40.0,46.7,53.3,60.0,66.7,73.3,80.0,86.7,93.3,100]
-    : [0,14.1,28.6,42.7,57.3,71.4,85.9,100];
+  LEVELS    = n === 16 ? LEVELS_16.slice() : n === 10 ? LEVELS_10.slice() : LEVELS_8.slice();
+  LEVEL_PCT = LEVELS.map(v => Math.round(Number(v) / 255 * 1000) / 10);
 
   CHANNELS.forEach(ch => { data[ch] = LEVELS.map(() => ({x:'',y:'',Y:''})); });
 
   document.getElementById('btn8').classList.toggle('prec-active', n === 8);
+  const b10 = document.getElementById('btn10');
+  if (b10) b10.classList.toggle('prec-active', n === 10);
   document.getElementById('btn16').classList.toggle('prec-active', n === 16);
 
-  const hints8  = '8 punktów: poziomy 0 · 36 · 73 · 109 · 146 · 182 · 219 · 255';
-  const hints16 = '16 punktów: poziomy 0 · 17 · 34 · 51 · 68 · 85 · 102 · 119 · 136 · 153 · 170 · 187 · 204 · 221 · 238 · 255';
-  document.getElementById('precHint').textContent      = n === 16 ? hints16 : hints8;
+  document.getElementById('precHint').textContent      = `${n} punktów: poziomy ${LEVELS.join(' · ')}`;
   document.getElementById('pasteHint').textContent     = `→ ${n} wierszy dla aktualnie wybranego kanału. Separatory: spacja, tab, przecinek lub średnik.`;
   document.getElementById('infoPointCount').textContent = n;
   document.getElementById('infoLevels').textContent    = LEVELS.join(', ');
@@ -1519,7 +1517,7 @@ function parsePaste() {
   renderInputs();
   saveToStorage();
 
-  const used = Math.min(rows.length, 8);
+  const used = Math.min(rows.length, LEVELS.length);
   document.getElementById('pasteInput').value = '';
   // small feedback
   const btn = event.target;
