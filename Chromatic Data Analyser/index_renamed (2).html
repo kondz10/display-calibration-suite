@@ -3383,7 +3383,7 @@ function drawHeader(ctx, W, title, subtitle) {
 
 // Draw metric card
 function drawMetricCard(ctx, x, y, w, h, label, value, sub, accentColor) {
-  roundRect(ctx, x, y, w, h, 6, PNG.bg2, PNG.border);
+  roundRect(ctx, x, y, w, h, 6, PNG.bg, PNG.border);
   ctx.fillStyle = accentColor || PNG.text3; ctx.font = `500 10px ${PNG.mono}`;
   ctx.textAlign = 'left';
   ctx.fillText(label, x+12, y+18);
@@ -3397,16 +3397,68 @@ function drawMetricCard(ctx, x, y, w, h, label, value, sub, accentColor) {
 
 // Draw metric card — compact version for export
 function drawMetricCardSmall(ctx, x, y, w, h, label, value, sub, accentColor) {
-  roundRect(ctx, x, y, w, h, 6, PNG.bg2, PNG.border);
-  ctx.fillStyle = accentColor || PNG.text3; ctx.font = `500 10px ${PNG.mono}`;
-  ctx.textAlign = 'left';
-  ctx.fillText(label, x+12, y+16);
-  ctx.fillStyle = PNG.text; ctx.font = `600 17px ${PNG.mono}`;
-  ctx.fillText(value, x+12, y+36);
+  roundRect(ctx, x, y, w, h, 6, PNG.bg, PNG.border);
+  const cx = x + w/2;
+  ctx.textAlign = 'center';
+  // label
+  ctx.fillStyle = accentColor || PNG.text3; ctx.font = `600 13px ${PNG.mono}`;
+  ctx.fillText(label, cx, y+24);
+  // big value
+  ctx.fillStyle = PNG.text; ctx.font = `700 30px ${PNG.mono}`;
+  ctx.fillText(value, cx, y+58);
+  // sub text, centered and wrapped
   if (sub) {
-    ctx.fillStyle = PNG.text3; ctx.font = `9px ${PNG.mono}`;
-    ctx.fillText(sub, x+12, y+50);
+    ctx.fillStyle = PNG.text3; ctx.font = `12px ${PNG.mono}`;
+    wrapTextLinesCentered(ctx, sub, cx, y+78, w - 20, 15, h - 78 - 8);
   }
+  ctx.textAlign = 'left';
+}
+
+// Centered word-wrap variant
+function wrapTextLinesCentered(ctx, text, cx, y, maxW, lineH, maxHeight) {
+  const words = String(text).replace(/\s+/g, ' ').trim().split(' ');
+  let line = '', yy = y;
+  for (let i = 0; i < words.length; i++) {
+    const test = line ? line + ' ' + words[i] : words[i];
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line, cx, yy);
+      line = words[i];
+      yy += lineH;
+      if (maxHeight != null && (yy - y) > maxHeight - lineH) {
+        let rest = line;
+        while (ctx.measureText(rest + '…').width > maxW && rest.length) rest = rest.slice(0, -1);
+        ctx.fillText(rest + '…', cx, yy);
+        return;
+      }
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, cx, yy);
+}
+
+// Draw wrapped text within maxW; stops before exceeding maxHeight
+function wrapTextLines(ctx, text, x, y, maxW, lineH, maxHeight) {
+  const words = String(text).replace(/\s+/g, ' ').trim().split(' ');
+  let line = '', cy = y;
+  for (let i = 0; i < words.length; i++) {
+    const test = line ? line + ' ' + words[i] : words[i];
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line, x, cy);
+      line = words[i];
+      cy += lineH;
+      if (maxHeight != null && (cy - y) > maxHeight - lineH) {
+        // no more vertical room — append ellipsis to remaining and stop
+        let rest = line;
+        while (ctx.measureText(rest + '…').width > maxW && rest.length) rest = rest.slice(0, -1);
+        ctx.fillText(rest + '…', x, cy);
+        return;
+      }
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, x, cy);
 }
 
 
@@ -3631,7 +3683,7 @@ function buildChromaImage() {
 function buildRGBTrackImage() {
   const W = 1040, PAD = 20;
   const metrics = collectMetrics('rgbTrackCards');
-  const cardH = 60; // smaller cards
+  const cardH = 110; // taller for larger centered fonts
   const CHART_H = 360;
   const H = 52 + PAD + 36 + 20 + CHART_H + 14 + (metrics.length > 0 ? 36 + cardH + 14 : 0) + PAD;
   const { canvas: c, ctx } = makeHiResCanvas(W, H);
@@ -3649,28 +3701,19 @@ function buildRGBTrackImage() {
   });
   cy += 20;
 
-  // ── Compute tight Y range from actual data ────────────────────────────────
+  // ── Use the SAME Y range as the on-screen preview (resolved runtime bounds) ─
   const ch = charts['rgbTrack'];
   let exportYMin, exportYMax;
-  if (ch && ch.config && ch.config.data) {
-    const allVals = ch.config.data.datasets
-      .filter(ds => ds.pointRadius !== 0) // skip the 100% reference line
-      .flatMap(ds => (ds.data || []).filter(v => v !== null));
-    if (allVals.length) {
-      const dMin = Math.min(...allVals);
-      const dMax = Math.max(...allVals);
-      const margin = Math.max(0.5, (dMax - dMin) * 0.4 + 0.3);
-      exportYMin = Math.floor((Math.min(dMin, 100) - margin) * 10) / 10;
-      exportYMax = Math.ceil((Math.max(dMax, 100) + margin) * 10) / 10;
-    }
+  if (ch && ch.scales && ch.scales.y) {
+    exportYMin = ch.scales.y.min;
+    exportYMax = ch.scales.y.max;
   }
 
   roundRect(ctx, PAD, cy, W-PAD*2, CHART_H, 6, PNG.bg, PNG.border);
-  reDrawChartWhite(ch, ctx, PAD+10, cy+10, W-PAD*2-20, CHART_H-20, {
-    'scales.y.min': exportYMin,
-    'scales.y.max': exportYMax,
-    'scales.y.ticks.stepSize': undefined,
-  });
+  const yOverrides = {};
+  if (exportYMin != null) yOverrides['scales.y.min'] = exportYMin;
+  if (exportYMax != null) yOverrides['scales.y.max'] = exportYMax;
+  reDrawChartWhite(ch, ctx, PAD+10, cy+10, W-PAD*2-20, CHART_H-20, yOverrides);
   cy += CHART_H + 14;
   if (metrics.length > 0) {
     drawSectionLabel(ctx, PAD, cy+10, W, 'Podsumowanie');
@@ -3679,11 +3722,40 @@ function buildRGBTrackImage() {
     const cw = Math.floor((W - PAD*2 - (cols-1)*8) / cols);
     metrics.forEach((m, i) => {
       const row = Math.floor(i/cols), col2 = i%cols;
-      const color = m.label.includes('Red') ? PNG.R : m.label.includes('Green') ? PNG.G : m.label.includes('Blue') ? PNG.B : PNG.text3;
-      drawMetricCardSmall(ctx, PAD + col2*(cw+8), cy + row*(cardH+8), cw, cardH, m.label, m.value, m.sub, color);
+      const cardX = PAD + col2*(cw+8), cardY = cy + row*(cardH+8);
+      const isAssessment = !m.value || /ocena/i.test(m.label);
+      if (isAssessment) {
+        drawAssessmentCard(ctx, cardX, cardY, cw, cardH, m);
+      } else {
+        const color = m.label.includes('Red') ? PNG.R : m.label.includes('Green') ? PNG.G : m.label.includes('Blue') ? PNG.B : PNG.text3;
+        drawMetricCardSmall(ctx, cardX, cardY, cw, cardH, m.label, m.value, m.sub, color);
+      }
     });
   }
   return c;
+}
+
+// Dedicated renderer for the "Ocena RGB Tracking" card — verdict badge + concise stat, no overflow
+function drawAssessmentCard(ctx, x, y, w, h, m) {
+  roundRect(ctx, x, y, w, h, 6, PNG.bg, PNG.border);
+  const cx = x + w/2;
+  ctx.textAlign = 'center';
+  // label
+  ctx.fillStyle = PNG.text3; ctx.font = `600 13px ${PNG.mono}`;
+  ctx.fillText(m.label, cx, y+24);
+  // verdict badge (from the DOM badge text/class)
+  const good = (m.badgeClass || '').includes('good');
+  const verdict = m.badge || (good ? '✓ Dobry tracking' : '⚠ Wymaga kalibracji');
+  ctx.fillStyle = good ? PNG.green : PNG.red;
+  ctx.font = `700 18px ${PNG.mono}`;
+  ctx.fillText(verdict, cx, y+52);
+  // concise max-deviation line
+  const subClean = String(m.sub || '').replace(/\s+/g, ' ').trim();
+  const devMatch = subClean.match(/([\d.,]+)\s*%/);
+  const devLine = devMatch ? `Maks. odchylenie kanału: ${devMatch[1]}%` : subClean;
+  ctx.fillStyle = PNG.text3; ctx.font = `12px ${PNG.mono}`;
+  wrapTextLinesCentered(ctx, devLine, cx, y+76, w - 20, 15, h - 76 - 8);
+  ctx.textAlign = 'left';
 }
 
 function buildDEImage() {
