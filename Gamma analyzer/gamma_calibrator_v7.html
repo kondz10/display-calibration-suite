@@ -204,7 +204,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 </div>
 
 <div class="chart-card">
-  <div class="sec" style="margin-bottom:12px">Krzywa transferu</div>
+  <div class="sec" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+    <span>Krzywa transferu</span>
+    <button class="btn-import" onclick="exportGammaPNG()" style="margin:0"><span>↓ Pobierz PNG</span></button>
+  </div>
   <div class="chart-wrap">
     <canvas id="gc-chart" role="img" aria-label="Wykres krzywej gamma na podstawie pomiarów luminancji">Krzywa gamma.</canvas>
   </div>
@@ -463,6 +466,152 @@ function redrawChart(){
       }
     }
   });
+}
+
+/* ── EKSPORT PNG (białe tło) ── */
+function exportGammaPNG() {
+  if (!fitResult) { document.getElementById('gc-info').textContent = 'Najpierw kliknij „Oblicz krzywą", aby wygenerować wykres do eksportu.'; return; }
+
+  const pts   = getPoints();
+  const Lmax  = fitResult.Lmax;
+  const fgamma= fitResult.gamma;
+
+  // Light-theme palette
+  const C = {
+    bg:'#ffffff', panel:'#ffffff', border:'#d0d4de',
+    text:'#1a1d26', text2:'#4a4f60', muted:'#8b90a0',
+    accent:'#7a0fa8', red:'#c0392b', green:'#1e8c5a', grid:'rgba(0,0,0,0.08)',
+    mono:"'Share Tech Mono', monospace"
+  };
+
+  const SCALE = 2;
+  const W = 1040, PAD = 24;
+  const headerH = 70, metricsH = 96, chartH = 460;
+  const H = PAD + headerH + metricsH + 16 + chartH + PAD;
+
+  const cv = document.createElement('canvas');
+  cv.width = W * SCALE; cv.height = H * SCALE;
+  const ctx = cv.getContext('2d');
+  ctx.scale(SCALE, SCALE);
+
+  // background
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+
+  // ── header ──
+  let y = PAD;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = C.text; ctx.font = `700 22px ${C.mono}`;
+  ctx.fillText('Gamma Analyzer — krzywa transferu', PAD, y + 24);
+  ctx.fillStyle = C.muted; ctx.font = `13px ${C.mono}`;
+  const known = KNOWN.reduce((a,b)=>Math.abs(b.gamma-fgamma)<Math.abs(a.gamma-fgamma)?b:a);
+  const isMatch = Math.abs(known.gamma - fgamma) <= known.tol;
+  const ident = isMatch ? known.name : 'Niestandardowa';
+  ctx.fillText(`Obliczona gamma · ${ident}`, PAD, y + 46);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = C.muted; ctx.font = `12px ${C.mono}`;
+  ctx.fillText('Display Calibration Suite', W - PAD, y + 24);
+  ctx.textAlign = 'left';
+  // header divider
+  ctx.strokeStyle = C.border; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, y + headerH - 8); ctx.lineTo(W - PAD, y + headerH - 8); ctx.stroke();
+
+  // ── metric cards ──
+  y += headerH;
+  const cards = [
+    { label:'GAMMA',         value: fgamma.toFixed(3),                 sub:'R² = ' + fitResult.r2.toFixed(4) },
+    { label:'LMAX',          value: Lmax.toFixed(1),                   sub:'cd/m²' },
+    { label:'IDENTYFIKACJA', value: ident,                             sub: isMatch ? known.desc : `γ = ${fgamma.toFixed(3)}` },
+  ];
+  if (targetActive && targetGamma) {
+    cards.push({ label:'CEL', value:'γ ' + targetGamma.toFixed(2), sub:'gamma docelowa' });
+  }
+  const cols = cards.length;
+  const gap = 10;
+  const cw = Math.floor((W - PAD*2 - (cols-1)*gap) / cols);
+  const ch = metricsH - 8;
+  cards.forEach((c, i) => {
+    const cx = PAD + i*(cw+gap);
+    roundRectGA(ctx, cx, y, cw, ch, 8, C.bg, C.border);
+    const mid = cx + cw/2;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.muted; ctx.font = `600 12px ${C.mono}`;
+    ctx.fillText(c.label, mid, y + 22);
+    ctx.fillStyle = (c.label==='IDENTYFIKACJA' && isMatch) ? C.green : C.text;
+    const valFont = c.label==='IDENTYFIKACJA' ? 16 : 26;
+    ctx.font = `700 ${valFont}px ${C.mono}`;
+    ctx.fillText(c.value, mid, y + (c.label==='IDENTYFIKACJA' ? 52 : 56));
+    ctx.fillStyle = C.muted; ctx.font = `11px ${C.mono}`;
+    ctx.fillText(c.sub, mid, y + ch - 12);
+    ctx.textAlign = 'left';
+  });
+
+  // ── chart (rendered offscreen on white theme, then blitted) ──
+  y += metricsH + 16;
+  roundRectGA(ctx, PAD, y, W - PAD*2, chartH, 8, C.bg, C.border);
+
+  const innerPad = 14;
+  const chartX = PAD + innerPad, chartY = y + innerPad;
+  const chartW = W - PAD*2 - innerPad*2, chartHH = chartH - innerPad*2;
+
+  const off = document.createElement('canvas');
+  off.width = chartW * SCALE; off.height = chartHH * SCALE;
+
+  const datasets = [
+    { label:'Zmierzona γ='+fgamma.toFixed(2), data:gammaCurve(fgamma,Lmax), type:'line',
+      borderColor:C.accent, borderWidth:5, pointRadius:0, fill:false, tension:0, order:2 },
+    { label:'Ref γ=2.2', data:gammaCurve(2.2,Lmax), type:'line',
+      borderColor:'rgba(0,0,0,0.18)', borderWidth:3, borderDash:[8,6], pointRadius:0, fill:false, tension:0, order:4 },
+    { label:'Pomiary', data:pts.map(p=>({x:p.v,y:p.L})), type:'scatter',
+      backgroundColor:C.accent, borderColor:C.accent, pointRadius:9, order:1 },
+  ];
+  if (targetActive && targetGamma) {
+    datasets.push({ label:'Cel γ='+targetGamma.toFixed(2), data:gammaCurve(targetGamma,Lmax), type:'line',
+      borderColor:C.red, borderWidth:5, pointRadius:0, fill:false, tension:0, order:3 });
+  }
+
+  const exportChart = new Chart(off.getContext('2d'), {
+    type:'scatter',
+    data:{ datasets },
+    options:{
+      responsive:false, maintainAspectRatio:false, animation:false, devicePixelRatio:SCALE,
+      scales:{
+        x:{ type:'linear', min:0, max:255,
+            title:{display:true,text:'POZIOM SYGNAŁU  (0–255)',color:C.text2,font:{family:'Share Tech Mono',size:16}},
+            grid:{color:C.grid}, ticks:{color:C.text2,font:{family:'Share Tech Mono',size:15},maxTicksLimit:9} },
+        y:{ min:0,
+            title:{display:true,text:'LUMINANCJA  (cd/m²)',color:C.text2,font:{family:'Share Tech Mono',size:16}},
+            grid:{color:C.grid}, ticks:{color:C.text2,font:{family:'Share Tech Mono',size:15}} }
+      },
+      plugins:{
+        legend:{ display:true, labels:{color:C.text2,font:{family:'Share Tech Mono',size:15},boxWidth:18,
+          filter:item=>item.label!=='Pomiary'||pts.length>0} },
+        tooltip:{ enabled:false }
+      }
+    }
+  });
+
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(chartX, chartY, chartW, chartHH);
+  ctx.drawImage(off, 0, 0, off.width, off.height, chartX, chartY, chartW, chartHH);
+  exportChart.destroy();
+
+  // ── download ──
+  const a = document.createElement('a');
+  a.href = cv.toDataURL('image/png');
+  a.download = `gamma_${fgamma.toFixed(2)}.png`;
+  a.click();
+}
+
+function roundRectGA(ctx, x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y,   x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x,   y+h, r);
+  ctx.arcTo(x,   y+h, x,   y,   r);
+  ctx.arcTo(x,   y,   x+w, y,   r);
+  ctx.closePath();
+  if (fill)   { ctx.fillStyle = fill;   ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
 }
 
 /* ── IMPORT ── */
