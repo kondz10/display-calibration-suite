@@ -758,6 +758,8 @@ select:hover { border-color: var(--accent); }
         <button class="roi-btn" id="btn-roi-point">Point</button>
         <button class="roi-btn" id="btn-roi-rect">Rectangle</button>
         <button class="roi-btn" id="btn-roi-grid">Grid</button>
+        <button class="roi-btn" id="btn-roi-circle">Circle</button>
+        <button class="roi-btn" id="btn-roi-ring">Ring</button>
         <button class="roi-btn clear" id="btn-roi-clear">⊘ Clear All</button>
       </div>
       <div id="grid-config" style="display:none;margin-top:4px;margin-bottom:10px;">
@@ -782,6 +784,20 @@ select:hover { border-color: var(--accent); }
         <!-- hidden inputs still used by JS logic -->
         <input class="grid-spinner" id="grid-cols" type="number" min="1" max="8" value="2">
         <input class="grid-spinner" id="grid-rows" type="number" min="1" max="4" value="2">
+      </div>
+      <div id="ring-config" style="display:none;margin-top:4px;margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:1px;line-height:1.7;margin-bottom:8px;">
+          Przeciągnij od środka → pierścień.<br>
+          Przeciągnij <span style="color:#8b15ba">wewnętrzny</span> lub <span style="color:#8b15ba">zewnętrzny</span> okrąg aby zmienić promień.
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span style="font-size:10px;color:var(--text3);letter-spacing:1px;white-space:nowrap;">R wew.</span>
+          <input type="range" id="ring-ratio-slider" min="5" max="90" value="33" step="1"
+            style="flex:1;accent-color:var(--accent);cursor:pointer;"
+            oninput="window._app && window._app._onRingRatioChange(this.value)">
+          <span style="font-size:11px;color:var(--accent);font-family:var(--mono);min-width:34px;text-align:right;" id="ring-ratio-label">33%</span>
+        </div>
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1px;">promień wewnętrzny jako % zewnętrznego</div>
       </div>
       <div id="roi-panel"></div>
       <button class="btn-export-grid" id="btn-export-grid-csv" style="display:none;">↓ Export Grid CSV</button>
@@ -1578,21 +1594,27 @@ class Legend {
 class ROIManager {
   constructor(onUpdate) {
     this.onUpdate = onUpdate;
-    this.mode = null;   // 'point' | 'rect' | 'grid'
+    this.mode = null;   // 'point' | 'rect' | 'grid' | 'circle' | 'ring'
     this.active = false;
     this._dragging = false;
     this._x1=0;this._y1=0;this._x2=0;this._y2=0;
     this._points = [];  // [{x,y}] — numbered cursors
     this._rect = null;
     this._grid = null;        // {x1,y1,x2,y2,cols,rows,cells:[]}
+    this._circle = null;      // {cx,cy,r,stats}
+    this._ring   = null;      // {cx,cy,rInner,rOuter,statsInner,statsOuter,statsRing}
+    this._rectStats = null;
     this.gridCols = 2;
     this.gridRows = 2;
+    this.ringRatio = 0.33;   // inner radius as fraction of outer (0.05–0.90)
   }
 
   setMode(mode) { this.mode = mode; this.active = !!mode; }
 
   clear() {
-    this._points=[]; this._rect=null; this._grid=null; this._dragging=false;
+    this._points=[]; this._rect=null; this._grid=null;
+    this._circle=null; this._ring=null; this._rectStats=null;
+    this._dragging=false;
     this.onUpdate({type:'clear'});
   }
 
@@ -1602,7 +1624,7 @@ class ROIManager {
       this._points.push(pt);
       this.onUpdate({type:'all'});
       return true;
-    } else if (this.mode === 'rect' || this.mode === 'grid') {
+    } else if (this.mode === 'rect' || this.mode === 'grid' || this.mode === 'circle' || this.mode === 'ring') {
       this._dragging = true;
       this._x1=x; this._y1=y; this._x2=x; this._y2=y;
       return true;
@@ -1611,7 +1633,7 @@ class ROIManager {
   }
 
   handleMouseMove(x, y) {
-    if ((this.mode === 'rect' || this.mode === 'grid') && this._dragging) {
+    if ((this.mode === 'rect' || this.mode === 'grid' || this.mode === 'circle' || this.mode === 'ring') && this._dragging) {
       this._x2=x; this._y2=y;
       this.onUpdate({type:'rect-preview'});
       return true;
@@ -1620,9 +1642,35 @@ class ROIManager {
   }
 
   handleMouseUp(x, y, lum, w, h) {
-    if ((this.mode === 'rect' || this.mode === 'grid') && this._dragging) {
+    if ((this.mode === 'rect' || this.mode === 'grid' || this.mode === 'circle' || this.mode === 'ring') && this._dragging) {
       this._dragging = false;
       this._x2 = x; this._y2 = y;
+
+      if (this.mode === 'circle') {
+        const cx = (this._x1 + x) / 2;
+        const cy = (this._y1 + y) / 2;
+        const r  = Math.sqrt((x - this._x1)**2 + (y - this._y1)**2) / 2;
+        if (r < 2) return true;
+        const stats = this._calcStatsCircle(lum, w, h, cx, cy, r);
+        this._circle = {cx, cy, r, stats};
+        this.onUpdate({type:'all'});
+        return true;
+      }
+
+      if (this.mode === 'ring') {
+        const cx = (this._x1 + x) / 2;
+        const cy = (this._y1 + y) / 2;
+        const rOuter = Math.sqrt((x - this._x1)**2 + (y - this._y1)**2) / 2;
+        const rInner = rOuter * this.ringRatio;
+        if (rOuter < 4) return true;
+        const statsOuter = this._calcStatsCircle(lum, w, h, cx, cy, rOuter);
+        const statsInner = this._calcStatsCircle(lum, w, h, cx, cy, rInner);
+        const statsRing  = this._calcStatsRing(lum, w, h, cx, cy, rInner, rOuter);
+        this._ring = {cx, cy, rInner, rOuter, statsOuter, statsInner, statsRing};
+        this.onUpdate({type:'all'});
+        return true;
+      }
+
       const x1=Math.max(0,Math.min(w-1,Math.floor(Math.min(this._x1,this._x2))));
       const y1=Math.max(0,Math.min(h-1,Math.floor(Math.min(this._y1,this._y2))));
       const x2=Math.max(0,Math.min(w,Math.ceil(Math.max(this._x1,this._x2))));
@@ -1645,12 +1693,10 @@ class ROIManager {
           }
         }
         this._grid = {x1,y1,x2,y2,cols,rows,cells};
-        // keep _rect and _points intact
         this.onUpdate({type:'all'});
       } else {
         this._rect = {x1,y1,x2,y2};
-        // keep _grid and _points intact
-        const stats = this._calcStats(lum, w, h, x1, y1, x2, y2);
+        this._rectStats = this._calcStats(lum, w, h, x1, y1, x2, y2);
         this.onUpdate({type:'all'});
       }
       return true;
@@ -1681,6 +1727,39 @@ class ROIManager {
     this.onUpdate({type:'all'});
   }
 
+  // Recompute ring stats after radius change
+  _recomputeRing(lum, w, h) {
+    if (!this._ring) return;
+    const {cx, cy, rOuter} = this._ring;
+    const rInner = rOuter * this.ringRatio;
+    const statsOuter = this._calcStatsCircle(lum, w, h, cx, cy, rOuter);
+    const statsInner = this._calcStatsCircle(lum, w, h, cx, cy, rInner);
+    const statsRing  = this._calcStatsRing(lum, w, h, cx, cy, rInner, rOuter);
+    this._ring = {...this._ring, rInner, statsOuter, statsInner, statsRing};
+    this.onUpdate({type:'all'});
+  }
+
+  // Drag-resize: detect which part of ring is near cursor
+  // Returns: 'outer' | 'inner' | null
+  hitTestRing(x, y) {
+    if (!this._ring) return null;
+    const {cx, cy, rInner, rOuter} = this._ring;
+    const d = Math.sqrt((x-cx)**2+(y-cy)**2);
+    const SNAP = Math.max(8, rOuter * 0.08);
+    if (Math.abs(d - rOuter) < SNAP) return 'outer';
+    if (Math.abs(d - rInner) < SNAP) return 'inner';
+    return null;
+  }
+
+  hitTestCircle(x, y) {
+    if (!this._circle) return null;
+    const {cx, cy, r} = this._circle;
+    const d = Math.sqrt((x-cx)**2+(y-cy)**2);
+    const SNAP = Math.max(8, r * 0.08);
+    if (Math.abs(d - r) < SNAP) return 'outer';
+    return null;
+  }
+
   _calcStats(lum, w, h, x1, y1, x2, y2) {
     const vals = [];
     for (let y=y1;y<y2;y++) for (let x=x1;x<x2;x++) {
@@ -1698,6 +1777,43 @@ class ROIManager {
     return {min:vals[0], max:vals[n-1], mean, median, std, count:n};
   }
 
+  _calcStatsCircle(lum, w, h, cx, cy, r) {
+    const vals = [];
+    const x1=Math.max(0,Math.floor(cx-r)), x2=Math.min(w,Math.ceil(cx+r));
+    const y1=Math.max(0,Math.floor(cy-r)), y2=Math.min(h,Math.ceil(cy+r));
+    const r2=r*r;
+    for (let y=y1;y<y2;y++) for (let x=x1;x<x2;x++) {
+      if ((x-cx)**2+(y-cy)**2>r2) continue;
+      const v=lum[y*w+x];
+      if (isFinite(v)) vals.push(v);
+    }
+    if (!vals.length) return null;
+    vals.sort((a,b)=>a-b);
+    const n=vals.length, sum=vals.reduce((a,b)=>a+b,0), mean=sum/n;
+    const median=n%2===0?(vals[n/2-1]+vals[n/2])/2:vals[Math.floor(n/2)];
+    const std=Math.sqrt(vals.reduce((a,v)=>a+(v-mean)*(v-mean),0)/n);
+    return {min:vals[0], max:vals[n-1], mean, median, std, count:n};
+  }
+
+  _calcStatsRing(lum, w, h, cx, cy, rInner, rOuter) {
+    const vals = [];
+    const x1=Math.max(0,Math.floor(cx-rOuter)), x2=Math.min(w,Math.ceil(cx+rOuter));
+    const y1=Math.max(0,Math.floor(cy-rOuter)), y2=Math.min(h,Math.ceil(cy+rOuter));
+    const ri2=rInner*rInner, ro2=rOuter*rOuter;
+    for (let y=y1;y<y2;y++) for (let x=x1;x<x2;x++) {
+      const d2=(x-cx)**2+(y-cy)**2;
+      if (d2<ri2||d2>ro2) continue;
+      const v=lum[y*w+x];
+      if (isFinite(v)) vals.push(v);
+    }
+    if (!vals.length) return null;
+    vals.sort((a,b)=>a-b);
+    const n=vals.length, sum=vals.reduce((a,b)=>a+b,0), mean=sum/n;
+    const median=n%2===0?(vals[n/2-1]+vals[n/2])/2:vals[Math.floor(n/2)];
+    const std=Math.sqrt(vals.reduce((a,v)=>a+(v-mean)*(v-mean),0)/n);
+    return {min:vals[0], max:vals[n-1], mean, median, std, count:n};
+  }
+
   drawOverlay(ctx) {
     // Numbered point cursors
     for (let i = 0; i < this._points.length; i++) {
@@ -1706,7 +1822,7 @@ class ROIManager {
       const R = 8;
 
       // Crosshair lines
-      ctx.strokeStyle = '#ff9100';
+      ctx.strokeStyle = '#8b15ba';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(x - 14, y); ctx.lineTo(x - R, y);
@@ -1718,7 +1834,7 @@ class ROIManager {
       // Circle
       ctx.beginPath();
       ctx.arc(x, y, R, 0, Math.PI * 2);
-      ctx.strokeStyle = '#ff9100';
+      ctx.strokeStyle = '#8b15ba';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
@@ -1728,7 +1844,7 @@ class ROIManager {
       ctx.font = 'bold 10px "Share Tech Mono"';
       const tw = ctx.measureText(num).width;
       const bw = tw + 5, bh = 13;
-      ctx.fillStyle = 'rgba(255,145,0,0.85)';
+      ctx.fillStyle = 'rgba(139,21,186,0.90)';
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(bx, by - bh + 2, bw, bh, 3) : ctx.rect(bx, by - bh + 2, bw, bh);
       ctx.fill();
@@ -1750,13 +1866,22 @@ class ROIManager {
       } else {
         ({x1, y1, x2, y2} = this._rect);
       }
-      ctx.strokeStyle = '#ff6600';
+      ctx.strokeStyle = '#8b15ba';
       ctx.lineWidth = 1;
       ctx.setLineDash([4,4]);
       ctx.strokeRect(x1, y1, x2-x1, y2-y1);
       ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(255,145,0,0.05)';
+      ctx.fillStyle = 'rgba(139,21,186,0.06)';
       ctx.fillRect(x1, y1, x2-x1, y2-y1);
+      // label at centre of rect
+      if (this._rect && !this._dragging) {
+        const rcx = (x1+x2)/2, rcy = (y1+y2)/2;
+        const availR = Math.min(x2-x1, y2-y1) * 0.28;
+        // stats are recalculated on demand via lum ref — show if we can get them from onUpdate
+        if (this._rectStats) {
+          drawValueLabel(ctx, rcx, rcy, this._rectStats.mean, availR);
+        }
+      }
     }
 
     // Grid ROI — show if data exists OR currently dragging in grid mode
@@ -1812,8 +1937,8 @@ class ROIManager {
               const cellCy = cy + ch/2;
 
               // Adaptive font size based on cell size
-              const fontSize = Math.max(10, Math.min(20, cw / 4.8, ch / 2.4));
-              const unitSize = Math.max(7, fontSize * 0.65);
+              const fontSize = Math.max(14, Math.min(28, cw / 3.6, ch / 1.9));
+              const unitSize = Math.max(10, fontSize * 0.65);
 
               // Main value
               ctx.font = `bold ${fontSize}px "Share Tech Mono"`;
@@ -1836,20 +1961,20 @@ class ROIManager {
                 }
 
                 // Value
-                ctx.fillStyle = '#33ff33';
+                ctx.fillStyle = '#8b15ba';
                 ctx.font = `bold ${fontSize}px "Share Tech Mono"`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(txt, cellCx, cellCy - unitSize/2 - 1);
 
                 // Unit
-                ctx.fillStyle = 'rgba(51,255,51,0.6)';
+                ctx.fillStyle = 'rgba(139,21,186,0.60)';
                 ctx.font = `${unitSize}px "Share Tech Mono"`;
                 ctx.fillText(unit, cellCx, cellCy + fontSize/2 + 1);
               } else if (cw > 20 && ch > 10) {
                 // Tiny fallback — just the number, no background
-                ctx.font = `${Math.max(7, fontSize * 0.8)}px "Share Tech Mono"`;
-                ctx.fillStyle = '#33ff33';
+                ctx.font = `${Math.max(10, fontSize * 0.8)}px "Share Tech Mono"`;
+                ctx.fillStyle = '#8b15ba';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(txt, cellCx, cellCy);
@@ -1861,11 +1986,123 @@ class ROIManager {
         ctx.textAlign = 'left';
       }
     }
+    // Circle ROI
+    const circlePreview = this.mode==='circle' && this._dragging;
+    if (this._circle || circlePreview) {
+      let cx, cy, r;
+      if (circlePreview) {
+        cx = (this._x1+this._x2)/2; cy = (this._y1+this._y2)/2;
+        r  = Math.sqrt((this._x2-this._x1)**2+(this._y2-this._y1)**2)/2;
+      } else {
+        ({cx,cy,r} = this._circle);
+      }
+      ctx.strokeStyle = '#8b15ba'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(139,21,186,0.06)';
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+      // center crosshair
+      ctx.strokeStyle = '#8b15ba'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(cx-10,cy); ctx.lineTo(cx+10,cy); ctx.moveTo(cx,cy-10); ctx.lineTo(cx,cy+10); ctx.stroke();
+      // label
+      if (this._circle && this._circle.stats) {
+        drawValueLabel(ctx, cx, cy, this._circle.stats.mean, r * 0.40);
+      }
+    }
+
+    // Ring ROI
+    const ringPreview = this.mode==='ring' && this._dragging;
+    if (this._ring || ringPreview) {
+      let cx, cy, rInner, rOuter;
+      if (ringPreview) {
+        cx = (this._x1+this._x2)/2; cy = (this._y1+this._y2)/2;
+        rOuter = Math.sqrt((this._x2-this._x1)**2+(this._y2-this._y1)**2)/2;
+        rInner = rOuter * this.ringRatio;
+      } else {
+        ({cx,cy,rInner,rOuter} = this._ring);
+      }
+      // Outer ring
+      ctx.strokeStyle = '#8b15ba'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI*2); ctx.stroke();
+      // Inner ring
+      ctx.strokeStyle = 'rgba(139,21,186,0.60)'; ctx.lineWidth = 1; ctx.setLineDash([3,4]);
+      ctx.beginPath(); ctx.arc(cx, cy, rInner, 0, Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+      // Fill ring area
+      ctx.fillStyle = 'rgba(139,21,186,0.06)';
+      ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI*2); ctx.arc(cx, cy, rInner, 0, Math.PI*2, true); ctx.fill();
+      // center crosshair
+      ctx.strokeStyle = '#8b15ba'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(cx-10,cy); ctx.lineTo(cx+10,cy); ctx.moveTo(cx,cy-10); ctx.lineTo(cx,cy+10); ctx.stroke();
+      // labels: inner (centre) and ring annulus
+      if (this._ring) {
+        const ringMidR = (rInner + rOuter) / 2;
+        drawValueLabel(ctx, cx, cy,
+          this._ring.statsInner ? this._ring.statsInner.mean : null,
+          rInner * 0.38);
+        drawValueLabel(ctx,
+          cx + ringMidR * 0.707,
+          cy - ringMidR * 0.707,
+          this._ring.statsRing ? this._ring.statsRing.mean : null,
+          (rOuter - rInner) * 0.32);
+      }
+    }
   }
 }
 
-// ═══════════════════════════════════════════════════════
-// EXPORTER
+// ── Shared label renderer ─────────────────────────────────────────────────────
+// availR: approximate radius of the containing area — drives font sizing
+function drawValueLabel(ctx, cx, cy, meanVal, availR) {
+  if (meanVal === null || meanVal === undefined) return;
+
+  const txt  = meanVal.toFixed(2);
+  const unit = 'cd/m²';
+
+  const PAD_X = 14, PAD_Y = 7, LINE_GAP = 4;
+  const fz = Math.max(12, Math.min(32, availR * 1.1));
+  const uz = Math.max(9,  fz * 0.58);
+
+  // Measure with correct fonts FIRST, then compute box
+  ctx.font = `bold ${fz}px "Share Tech Mono"`;
+  const tw = ctx.measureText(txt).width;
+  ctx.font = `${uz}px "Share Tech Mono"`;
+  const uw = ctx.measureText(unit).width;
+
+  const contentW = Math.max(tw, uw);
+  const boxW = contentW + PAD_X * 2;
+  const boxH = fz + uz + LINE_GAP + PAD_Y * 2;
+  const bx = cx - boxW / 2;
+  const by = cy - boxH / 2;
+
+  // Background pill
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  if (ctx.roundRect) {
+    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 6); ctx.fill();
+  } else {
+    ctx.fillRect(bx, by, boxW, boxH);
+  }
+  // Accent border
+  ctx.strokeStyle = 'rgba(139,21,186,0.55)'; ctx.lineWidth = 1;
+  if (ctx.roundRect) {
+    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 6); ctx.stroke();
+  } else {
+    ctx.strokeRect(bx, by, boxW, boxH);
+  }
+
+  // Value
+  ctx.fillStyle = '#8b15ba';
+  ctx.font = `bold ${fz}px "Share Tech Mono"`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(txt, cx, by + PAD_Y + fz);
+
+  // Unit
+  ctx.fillStyle = 'rgba(139,21,186,0.70)';
+  ctx.font = `${uz}px "Share Tech Mono"`;
+  ctx.fillText(unit, cx, by + PAD_Y + fz + LINE_GAP + uz);
+
+  ctx.textAlign = 'left';
+}
+
 // ═══════════════════════════════════════════════════════
 class Exporter {
   exportPNG(imgCanvas, legendCanvas, filename, legendParams, roi) {
@@ -1942,8 +2179,8 @@ class Exporter {
         const cellCy = cy + ch/2;
 
         // Font size: generous for export (min 12px, scales with cell)
-        const fontSize = Math.max(15, Math.min(40, cw/4, ch/2));
-        const unitSize = Math.max(11, fontSize * 0.6);
+        const fontSize = Math.max(20, Math.min(56, cw/3, ch/1.6));
+        const unitSize = Math.max(14, fontSize * 0.6);
 
         ctx.font = `bold ${fontSize}px "Arial", sans-serif`;
         const tw = ctx.measureText(txt).width;
@@ -1956,8 +2193,8 @@ class Exporter {
 
         if (cw < boxW + 8 || ch < boxH + 8) {
           // Tiny fallback
-          ctx.font = `bold ${Math.max(9, fontSize*0.7)}px Arial`;
-          ctx.fillStyle = '#33ff33';
+          ctx.font = `bold ${Math.max(13, fontSize*0.7)}px Arial`;
+          ctx.fillStyle = '#8b15ba';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(txt, cellCx, cellCy);
@@ -1983,14 +2220,14 @@ class Exporter {
         }
 
         // Value
-        ctx.fillStyle = '#33ff33';
+        ctx.fillStyle = '#8b15ba';
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(txt, cellCx, cellCy - unitSize/2 - 1);
 
         // Unit
-        ctx.fillStyle = 'rgba(51,255,51,0.65)';
+        ctx.fillStyle = 'rgba(139,21,186,0.60)';
         ctx.font = `${unitSize}px Arial`;
         ctx.fillText(unit, cellCx, cellCy + fontSize/2 + 1);
       }
@@ -2281,6 +2518,8 @@ class App {
     document.getElementById('btn-roi-point').addEventListener('click', () => this._setROIMode('point'));
     document.getElementById('btn-roi-rect').addEventListener('click', () => this._setROIMode('rect'));
     document.getElementById('btn-roi-grid').addEventListener('click', () => this._setROIMode('grid'));
+    document.getElementById('btn-roi-circle').addEventListener('click', () => this._setROIMode('circle'));
+    document.getElementById('btn-roi-ring').addEventListener('click', () => this._setROIMode('ring'));
     document.getElementById('btn-roi-clear').addEventListener('click', () => {
       this.roi.clear(); this._clearROIStats(); this._rerenderOverlay();
       document.getElementById('btn-export-grid-csv').style.display='none';
@@ -2350,6 +2589,8 @@ class App {
         case 'p': case 'P': this._setROIMode('point'); break;
         case 'r': case 'R': this._setROIMode('rect'); break;
         case 'g': case 'G': this._setROIMode('grid'); break;
+        case 'c': case 'C': this._setROIMode('circle'); break;
+        case 'i': case 'I': this._setROIMode('ring'); break;
       }
     });
   }
@@ -2358,20 +2599,23 @@ class App {
     const wasActive = this.roi.mode === mode && this.roi.active;
     if (wasActive) {
       this.roi.setMode(null);
-      document.getElementById('btn-roi-point').classList.remove('active');
-      document.getElementById('btn-roi-rect').classList.remove('active');
-      document.getElementById('btn-roi-grid').classList.remove('active');
+      ['point','rect','grid','circle','ring'].forEach(m => {
+        const b = document.getElementById('btn-roi-'+m);
+        if (b) b.classList.remove('active');
+      });
       document.getElementById('grid-config').style.display = 'none';
+      document.getElementById('ring-config').style.display = 'none';
       this.overlayCanvas.style.cursor = 'default';
     } else {
       this.roi.setMode(mode);
-      document.getElementById('btn-roi-point').classList.toggle('active', mode==='point');
-      document.getElementById('btn-roi-rect').classList.toggle('active', mode==='rect');
-      document.getElementById('btn-roi-grid').classList.toggle('active', mode==='grid');
-      document.getElementById('grid-config').style.display = mode==='grid' ? 'block' : 'none';
+      ['point','rect','grid','circle','ring'].forEach(m => {
+        const b = document.getElementById('btn-roi-'+m);
+        if (b) b.classList.toggle('active', m===mode);
+      });
+      document.getElementById('grid-config').style.display = mode==='grid'   ? 'block' : 'none';
+      document.getElementById('ring-config').style.display = (mode==='circle'||mode==='ring') ? 'block' : 'none';
       this.overlayCanvas.style.cursor = 'crosshair';
     }
-    // Refresh overlay immediately so existing markers stay visible after mode switch
     this._rerenderOverlay();
   }
 
@@ -2506,12 +2750,97 @@ class App {
   _onCanvasInteraction(e, imgPos, phase) {
     const {x,y} = imgPos;
     let consumed = false;
-    if (phase==='down'&&this.roi.active) consumed=this.roi.handleMouseDown(x,y,e.button);
-    else if (phase==='move'&&this.roi.active) consumed=this.roi.handleMouseMove(x,y);
-    else if (phase==='up'&&this.roi.active)
-      consumed=this.roi.handleMouseUp(x,y,this.renderer.luminance,this.renderer.width,this.renderer.height);
+
+    // ── Drag-resize for ring/circle edges (takes priority over new ROI drawing) ──
+    if (phase === 'down') {
+      const ringHit   = this.roi.hitTestRing(x, y);
+      const circleHit = this.roi._circle ? this.roi.hitTestCircle(x, y) : null;
+      if (ringHit) {
+        this._resizeDrag = { target: 'ring', part: ringHit };
+        consumed = true;
+      } else if (circleHit) {
+        this._resizeDrag = { target: 'circle', part: circleHit };
+        consumed = true;
+      }
+    } else if (phase === 'move' && this._resizeDrag) {
+      const lum = this.renderer.luminance;
+      const w = this.renderer.width, h = this.renderer.height;
+      if (this._resizeDrag.target === 'ring' && this.roi._ring) {
+        const {cx, cy} = this.roi._ring;
+        const d = Math.max(4, Math.sqrt((x-cx)**2+(y-cy)**2));
+        if (this._resizeDrag.part === 'outer') {
+          const rOuter = d;
+          const rInner = Math.min(rOuter * 0.95, Math.max(rOuter * 0.05, this.roi._ring.rInner));
+          const newRatio = rInner / rOuter;
+          this.roi.ringRatio = newRatio;
+          this.roi._ring.rOuter = rOuter;
+          this.roi._ring.rInner = rInner;
+          this._updateRatioSlider(newRatio);
+        } else {
+          const rInner = Math.min(d, this.roi._ring.rOuter * 0.95);
+          const newRatio = Math.max(0.05, rInner / this.roi._ring.rOuter);
+          this.roi.ringRatio = newRatio;
+          this.roi._ring.rInner = this.roi._ring.rOuter * newRatio;
+          this._updateRatioSlider(newRatio);
+        }
+        if (lum) this.roi._recomputeRing(lum, w, h);
+      } else if (this._resizeDrag.target === 'circle' && this.roi._circle) {
+        const {cx, cy} = this.roi._circle;
+        const r = Math.max(4, Math.sqrt((x-cx)**2+(y-cy)**2));
+        this.roi._circle.r = r;
+        if (lum) {
+          this.roi._circle.stats = this.roi._calcStatsCircle(lum, w, h, cx, cy, r);
+          this.roi.onUpdate({type:'all'});
+        }
+      }
+      this._rerenderOverlay();
+      consumed = true;
+    } else if (phase === 'up' && this._resizeDrag) {
+      this._resizeDrag = null;
+      this._showAllROIStats();
+      consumed = true;
+    }
+
+    // ── Cursor feedback on hover (no drag active) ──
+    if (phase === 'move' && !this._resizeDrag) {
+      if (!this.roi.active || this.roi.mode === 'point') {
+        const ringHit   = this.roi.hitTestRing(x, y);
+        const circleHit = this.roi.hitTestCircle ? this.roi.hitTestCircle(x, y) : null;
+        if (ringHit || circleHit) {
+          this.overlayCanvas.style.cursor = ringHit === 'inner' ? 'ew-resize' : 'nwse-resize';
+        } else {
+          this.overlayCanvas.style.cursor = this.roi.active ? 'crosshair' : 'default';
+        }
+      }
+    }
+
+    if (!consumed) {
+      if (phase==='down' && this.roi.active) consumed=this.roi.handleMouseDown(x,y,e.button);
+      else if (phase==='move' && this.roi.active) consumed=this.roi.handleMouseMove(x,y);
+      else if (phase==='up' && this.roi.active)
+        consumed=this.roi.handleMouseUp(x,y,this.renderer.luminance,this.renderer.width,this.renderer.height);
+    }
+
     this._rerenderOverlay();
     return consumed;
+  }
+
+  _updateRatioSlider(ratio) {
+    const pct = Math.round(ratio * 100);
+    const sl = document.getElementById('ring-ratio-slider');
+    const lb = document.getElementById('ring-ratio-label');
+    if (sl) sl.value = pct;
+    if (lb) lb.textContent = pct + '%';
+  }
+
+  _onRingRatioChange(val) {
+    const ratio = Math.max(0.05, Math.min(0.90, parseInt(val) / 100));
+    this.roi.ringRatio = ratio;
+    document.getElementById('ring-ratio-label').textContent = Math.round(ratio*100) + '%';
+    if (this.roi._ring && this.renderer.luminance) {
+      this.roi._recomputeRing(this.renderer.luminance, this.renderer.width, this.renderer.height);
+      this._rerenderOverlay();
+    }
   }
 
   _rerenderOverlay() {
@@ -2535,8 +2864,10 @@ class App {
     const hasPoints = roi._points && roi._points.length > 0;
     const hasRect   = !!roi._rect;
     const hasGrid   = !!roi._grid;
+    const hasCircle = !!roi._circle;
+    const hasRing   = !!roi._ring;
 
-    if (!hasPoints && !hasRect && !hasGrid) {
+    if (!hasPoints && !hasRect && !hasGrid && !hasCircle && !hasRing) {
       this._clearROIStats();
       document.getElementById('btn-export-grid-csv').style.display='none';
       return;
@@ -2650,10 +2981,57 @@ class App {
       document.getElementById('btn-export-grid-csv').style.display = 'none';
     }
 
+    // ── Circle ──
+    if (hasCircle) {
+      if (html) html += `<div style="border-top:1px solid var(--border);margin:8px 0 6px;"></div>`;
+      const {cx, cy, r, stats: sC} = roi._circle;
+      html += `<div class="roi-title" style="color:#8b15ba">Circle ROI</div>`;
+      html += `<div class="roi-row"><span class="roi-label">R</span><span class="roi-val">${r.toFixed(1)} px</span></div>`;
+      html += `<div class="roi-row"><span class="roi-label">CX/CY</span><span class="roi-val">${Math.round(cx)}, ${Math.round(cy)}</span></div>`;
+      if (sC) {
+        html += `
+          <div class="roi-row"><span class="roi-label">MIN</span><span class="roi-val">${num4(sC.min)}</span></div>
+          <div class="roi-row"><span class="roi-label">MAX</span><span class="roi-val">${num4(sC.max)}</span></div>
+          <div class="roi-row"><span class="roi-label">MEAN</span><span class="roi-val accent">${num4(sC.mean)}</span></div>
+          <div class="roi-row"><span class="roi-label">MED</span><span class="roi-val">${num4(sC.median)}</span></div>
+          <div class="roi-row"><span class="roi-label">STD</span><span class="roi-val">${num4(sC.std)}</span></div>
+          <div class="roi-row"><span class="roi-label">N</span><span class="roi-val">${sC.count.toLocaleString()} px</span></div>`;
+        html += `<button class="btn-copy" id="btn-copy-circle">⎘ Kopiuj do Excela</button>`;
+      }
+    }
+
+    // ── Ring ──
+    if (hasRing) {
+      if (html) html += `<div style="border-top:1px solid var(--border);margin:8px 0 6px;"></div>`;
+      const {cx:rcx, cy:rcy, rInner, rOuter, statsInner, statsOuter, statsRing} = roi._ring;
+      html += `<div class="roi-title" style="color:#8b15ba">Ring ROI</div>`;
+      html += `<div class="roi-row"><span class="roi-label">R OUT</span><span class="roi-val">${rOuter.toFixed(1)} px</span></div>`;
+      html += `<div class="roi-row"><span class="roi-label">R IN</span><span class="roi-val">${rInner.toFixed(1)} px</span></div>`;
+      const sections = [
+        {label: '● Centre', s: statsInner, color: '#8b15ba'},
+        {label: '○ Ring',   s: statsRing,  color: '#8b15ba'},
+        {label: '◉ Full',   s: statsOuter, color: 'var(--text2)'},
+      ];
+      sections.forEach(sec => {
+        if (!sec.s) return;
+        html += `<div class="roi-row" style="margin-top:5px"><span class="roi-label" style="color:${sec.color};letter-spacing:0.5px">${sec.label}</span></div>`;
+        html += `
+          <div class="roi-row"><span class="roi-label">MEAN</span><span class="roi-val accent">${num4(sec.s.mean)}</span></div>
+          <div class="roi-row"><span class="roi-label">MIN</span><span class="roi-val">${num4(sec.s.min)}</span></div>
+          <div class="roi-row"><span class="roi-label">MAX</span><span class="roi-val">${num4(sec.s.max)}</span></div>
+          <div class="roi-row"><span class="roi-label">STD</span><span class="roi-val">${num4(sec.s.std)}</span></div>
+          <div class="roi-row"><span class="roi-label">N</span><span class="roi-val">${sec.s.count.toLocaleString()} px</span></div>`;
+      });
+      if (statsInner && statsRing) {
+        const ratio = statsRing.mean > 0 ? (statsInner.mean / statsRing.mean) : null;
+        if (ratio !== null) html += `<div class="roi-row" style="margin-top:4px"><span class="roi-label" style="color:#8b15ba">HALO ×</span><span class="roi-val accent">${ratio.toFixed(3)}</span></div>`;
+      }
+      html += `<button class="btn-copy" id="btn-copy-ring">⎘ Kopiuj do Excela</button>`;
+    }
+
     document.getElementById('roi-panel').innerHTML = html;
 
     // ── Wire copy buttons ──
-
     // Points → tabbed table: #\tX\tY\tL[cd/m²]
     const btnCopyPts = document.getElementById('btn-copy-points');
     if (btnCopyPts) {
@@ -2710,6 +3088,41 @@ class App {
           if (s) tsv += `${cell.row+1}${TAB}${cell.col+1}${TAB}${cell.x1}${TAB}${cell.y1}${TAB}${cell.x2}${TAB}${cell.y2}${TAB}${num(s.mean)}${TAB}${num(s.min)}${TAB}${num(s.max)}${TAB}${num(s.median)}${TAB}${num(s.std)}${TAB}${s.count}${NL}`;
         }
         navigator.clipboard.writeText(tsv).then(() => flashCopy(btnCopyGrid));
+      };
+    }
+
+    // Circle → tabbed key-value
+    const btnCopyCircle = document.getElementById('btn-copy-circle');
+    if (btnCopyCircle) {
+      btnCopyCircle.onclick = () => {
+        const {cx, cy, r, stats: s} = roi._circle;
+        if (!s) return;
+        const tsv =
+          `Parametr${TAB}Wartość [cd/m²]${NL}` +
+          `MIN${TAB}${num(s.min)}${NL}MAX${TAB}${num(s.max)}${NL}` +
+          `MEAN${TAB}${num(s.mean)}${NL}MEDIAN${TAB}${num(s.median)}${NL}` +
+          `STD${TAB}${num(s.std)}${NL}N [px]${TAB}${s.count}${NL}` +
+          `CX${TAB}${cx.toFixed(1)}${NL}CY${TAB}${cy.toFixed(1)}${NL}R${TAB}${r.toFixed(1)}${NL}`;
+        navigator.clipboard.writeText(tsv).then(() => flashCopy(btnCopyCircle));
+      };
+    }
+
+    // Ring → tabbed table with Centre / Ring / Full sections
+    const btnCopyRing = document.getElementById('btn-copy-ring');
+    if (btnCopyRing) {
+      btnCopyRing.onclick = () => {
+        const {cx: rcx, cy: rcy, rInner, rOuter, statsInner, statsOuter, statsRing} = roi._ring;
+        const sRow = (label, s) => s ?
+          `${label}${TAB}${num(s.mean)}${TAB}${num(s.min)}${TAB}${num(s.max)}${TAB}${num(s.median)}${TAB}${num(s.std)}${TAB}${s.count}${NL}` : '';
+        const header = `Strefa${TAB}MEAN${TAB}MIN${TAB}MAX${TAB}MEDIAN${TAB}STD${TAB}N [px]${NL}`;
+        const ratio = statsInner && statsRing && statsRing.mean > 0 ? (statsInner.mean / statsRing.mean).toFixed(6).replace('.',',') : '';
+        const tsv = header +
+          sRow('Centre (inner)', statsInner) +
+          sRow('Ring (annulus)', statsRing) +
+          sRow('Full (outer)', statsOuter) +
+          `${NL}CX${TAB}${rcx.toFixed(1)}${NL}CY${TAB}${rcy.toFixed(1)}${NL}R_inner${TAB}${rInner.toFixed(1)}${NL}R_outer${TAB}${rOuter.toFixed(1)}${NL}` +
+          (ratio ? `Halo ratio (centre/ring)${TAB}${ratio}${NL}` : '');
+        navigator.clipboard.writeText(tsv).then(() => flashCopy(btnCopyRing));
       };
     }
   }
