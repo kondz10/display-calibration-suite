@@ -484,10 +484,10 @@ function exportGammaPNG() {
     mono:"'Share Tech Mono', monospace"
   };
 
-  const SCALE = 2;
+  const SCALE = 3;
   const W = 1040, PAD = 24;
-  const headerH = 70, metricsH = 96, chartH = 460;
-  const H = PAD + headerH + metricsH + 16 + chartH + PAD;
+  const metricsH = 120, chartH = 520;
+  const H = PAD + metricsH + 16 + chartH + PAD;
 
   const cv = document.createElement('canvas');
   cv.width = W * SCALE; cv.height = H * SCALE;
@@ -497,26 +497,12 @@ function exportGammaPNG() {
   // background
   ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
 
-  // ── header ──
-  let y = PAD;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = C.text; ctx.font = `700 22px ${C.mono}`;
-  ctx.fillText('Gamma Analyzer — krzywa transferu', PAD, y + 24);
-  ctx.fillStyle = C.muted; ctx.font = `13px ${C.mono}`;
   const known = KNOWN.reduce((a,b)=>Math.abs(b.gamma-fgamma)<Math.abs(a.gamma-fgamma)?b:a);
   const isMatch = Math.abs(known.gamma - fgamma) <= known.tol;
   const ident = isMatch ? known.name : 'Niestandardowa';
-  ctx.fillText(`Obliczona gamma · ${ident}`, PAD, y + 46);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = C.muted; ctx.font = `12px ${C.mono}`;
-  ctx.fillText('Display Calibration Suite', W - PAD, y + 24);
-  ctx.textAlign = 'left';
-  // header divider
-  ctx.strokeStyle = C.border; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(PAD, y + headerH - 8); ctx.lineTo(W - PAD, y + headerH - 8); ctx.stroke();
 
-  // ── metric cards ──
-  y += headerH;
+  // ── metric cards (bez nagłówka) ──
+  let y = PAD;
   const cards = [
     { label:'GAMMA',         value: fgamma.toFixed(3),                 sub:'R² = ' + fitResult.r2.toFixed(4) },
     { label:'LMAX',          value: Lmax.toFixed(1),                   sub:'cd/m²' },
@@ -534,14 +520,14 @@ function exportGammaPNG() {
     roundRectGA(ctx, cx, y, cw, ch, 8, C.bg, C.border);
     const mid = cx + cw/2;
     ctx.textAlign = 'center';
-    ctx.fillStyle = C.muted; ctx.font = `600 12px ${C.mono}`;
-    ctx.fillText(c.label, mid, y + 22);
+    ctx.fillStyle = C.muted; ctx.font = `600 16px ${C.mono}`;
+    ctx.fillText(c.label, mid, y + 30);
     ctx.fillStyle = (c.label==='IDENTYFIKACJA' && isMatch) ? C.green : C.text;
-    const valFont = c.label==='IDENTYFIKACJA' ? 16 : 26;
+    const valFont = c.label==='IDENTYFIKACJA' ? 22 : 38;
     ctx.font = `700 ${valFont}px ${C.mono}`;
-    ctx.fillText(c.value, mid, y + (c.label==='IDENTYFIKACJA' ? 52 : 56));
-    ctx.fillStyle = C.muted; ctx.font = `11px ${C.mono}`;
-    ctx.fillText(c.sub, mid, y + ch - 12);
+    ctx.fillText(c.value, mid, y + (c.label==='IDENTYFIKACJA' ? 70 : 76));
+    ctx.fillStyle = C.muted; ctx.font = `14px ${C.mono}`;
+    ctx.fillText(c.sub, mid, y + ch - 16);
     ctx.textAlign = 'left';
   });
 
@@ -549,7 +535,7 @@ function exportGammaPNG() {
   y += metricsH + 16;
   roundRectGA(ctx, PAD, y, W - PAD*2, chartH, 8, C.bg, C.border);
 
-  const innerPad = 14;
+  const innerPad = 16;
   const chartX = PAD + innerPad, chartY = y + innerPad;
   const chartW = W - PAD*2 - innerPad*2, chartHH = chartH - innerPad*2;
 
@@ -558,15 +544,15 @@ function exportGammaPNG() {
 
   const datasets = [
     { label:'Zmierzona γ='+fgamma.toFixed(2), data:gammaCurve(fgamma,Lmax), type:'line',
-      borderColor:C.accent, borderWidth:5, pointRadius:0, fill:false, tension:0, order:2 },
+      borderColor:C.accent, borderWidth:9, pointRadius:0, fill:false, tension:0, order:2 },
     { label:'Ref γ=2.2', data:gammaCurve(2.2,Lmax), type:'line',
-      borderColor:'rgba(0,0,0,0.18)', borderWidth:3, borderDash:[8,6], pointRadius:0, fill:false, tension:0, order:4 },
+      borderColor:'rgba(0,0,0,0.22)', borderWidth:5, borderDash:[10,7], pointRadius:0, fill:false, tension:0, order:4 },
     { label:'Pomiary', data:pts.map(p=>({x:p.v,y:p.L})), type:'scatter',
-      backgroundColor:C.accent, borderColor:C.accent, pointRadius:9, order:1 },
+      backgroundColor:C.accent, borderColor:C.accent, pointRadius:14, order:1 },
   ];
   if (targetActive && targetGamma) {
     datasets.push({ label:'Cel γ='+targetGamma.toFixed(2), data:gammaCurve(targetGamma,Lmax), type:'line',
-      borderColor:C.red, borderWidth:5, pointRadius:0, fill:false, tension:0, order:3 });
+      borderColor:C.red, borderWidth:9, pointRadius:0, fill:false, tension:0, order:3 });
   }
 
   const exportChart = new Chart(off.getContext('2d'), {
@@ -576,14 +562,16 @@ function exportGammaPNG() {
       responsive:false, maintainAspectRatio:false, animation:false, devicePixelRatio:SCALE,
       scales:{
         x:{ type:'linear', min:0, max:255,
-            title:{display:true,text:'POZIOM SYGNAŁU  (0–255)',color:C.text2,font:{family:'Share Tech Mono',size:16}},
-            grid:{color:C.grid}, ticks:{color:C.text2,font:{family:'Share Tech Mono',size:15},maxTicksLimit:9} },
+            title:{display:true,text:'POZIOM SYGNAŁU  (0–255)',color:C.text2,font:{family:'Share Tech Mono',size:24}},
+            border:{display:true,color:'rgba(0,0,0,0.35)',width:2},
+            grid:{color:'rgba(0,0,0,0.10)'}, ticks:{color:C.text2,font:{family:'Share Tech Mono',size:22},maxTicksLimit:9} },
         y:{ min:0,
-            title:{display:true,text:'LUMINANCJA  (cd/m²)',color:C.text2,font:{family:'Share Tech Mono',size:16}},
-            grid:{color:C.grid}, ticks:{color:C.text2,font:{family:'Share Tech Mono',size:15}} }
+            title:{display:true,text:'LUMINANCJA  (cd/m²)',color:C.text2,font:{family:'Share Tech Mono',size:24}},
+            border:{display:true,color:'rgba(0,0,0,0.35)',width:2},
+            grid:{color:'rgba(0,0,0,0.10)'}, ticks:{color:C.text2,font:{family:'Share Tech Mono',size:22}} }
       },
       plugins:{
-        legend:{ display:true, labels:{color:C.text2,font:{family:'Share Tech Mono',size:15},boxWidth:18,
+        legend:{ display:true, labels:{color:C.text2,font:{family:'Share Tech Mono',size:20},boxWidth:26,padding:16,
           filter:item=>item.label!=='Pomiary'||pts.length>0} },
         tooltip:{ enabled:false }
       }

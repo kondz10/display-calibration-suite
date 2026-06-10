@@ -1560,14 +1560,14 @@ function makeChartOptions(yLabel, yMin, yMax, refLine) {
     scales: {
       x: {
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+        ticks: { color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } }
       },
       y: {
         min: yMin !== undefined ? yMin : undefined,
         max: yMax !== undefined ? yMax : undefined,
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } },
-        title: { display: true, text: yLabel, color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+        ticks: { color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } },
+        title: { display: true, text: yLabel, color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } }
       }
     },
     interaction: { mode: 'nearest', axis: 'x', intersect: false }
@@ -1966,10 +1966,24 @@ function renderRGBTracking() {
   const gData = gains.map(g => g ? parseFloat(g.G.toFixed(2)) : null);
   const bData = gains.map(g => g ? parseFloat(g.B.toFixed(2)) : null);
 
-  // Zakres osi Y: nieco poza zakres danych
+  // Zakres osi Y: adaptacyjne skalowanie z detekcją outlierów
   const allVals = [...rData, ...gData, ...bData].filter(v => v !== null);
-  const minV = allVals.length ? Math.min(85, Math.floor(Math.min(...allVals) - 2)) : 85;
-  const maxV = allVals.length ? Math.max(110, Math.ceil(Math.max(...allVals) + 2)) : 110;
+  let minV = 85, maxV = 110;
+  if (allVals.length) {
+    const dMin = Math.min(...allVals), dMax = Math.max(...allVals);
+    const span = Math.max(dMax - dMin, 2.0);
+    // Padding: 20% zakresu danych, minimum 1.5 pp
+    const pad = Math.max(span * 0.20, 1.5);
+    // Snap do 0.5 pp
+    minV = Math.floor((dMin - pad) * 2) / 2;
+    maxV = Math.ceil( (dMax + pad) * 2) / 2;
+    // Minimalna rozpiętość: 5 pp żeby wykres nie był zbyt ciasny
+    if (maxV - minV < 5) {
+      const mid = (minV + maxV) / 2;
+      minV = Math.floor((mid - 2.5) * 2) / 2;
+      maxV = Math.ceil( (mid + 2.5) * 2) / 2;
+    }
+  }
 
   const trackOptions = {
     responsive: true,
@@ -1987,20 +2001,20 @@ function renderRGBTracking() {
     scales: {
       x: {
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } },
-        title: { display: true, text: 'Poziom sygnału', color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+        ticks: { color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } },
+        title: { display: true, text: 'Poziom sygnału', color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } }
       },
       y: {
         min: minV,
         max: maxV,
         grid: { color: 'rgba(255,255,255,0.07)' },
         ticks: {
-          color: '#555555',
-          font: { size: 11, family: "'Share Tech Mono', monospace" },
-          stepSize: 1,
+          color: '#222222',
+          font: { size: 28, family: "'Share Tech Mono', monospace" },
+          stepSize: (maxV - minV) > 12 ? 2 : 1,
           callback: v => Number.isInteger(v) ? v + '%' : ''
         },
-        title: { display: true, text: 'Gain [%]', color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+        title: { display: true, text: 'Gain [%]', color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } }
       }
     },
     interaction: { mode: 'nearest', axis: 'x', intersect: false }
@@ -2143,12 +2157,12 @@ function renderGrayscale() {
     scales: {
       x: {
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+        ticks: { color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } }
       },
       y: {
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } },
-        title: { display: true, text: 'Δ chromatyczność', color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+        ticks: { color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } },
+        title: { display: true, text: 'Δ chromatyczność', color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } }
       }
     },
     interaction: { mode: 'nearest', axis: 'x', intersect: false }
@@ -2222,13 +2236,13 @@ function renderGrayscale() {
     scales: {
       x: {
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+        ticks: { color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } }
       },
       y: {
         min: 0,
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } },
-        title: { display: true, text: 'ΔE2000', color: '#555555', font: { size: 11, family: "'Share Tech Mono', monospace" } }
+        ticks: { color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } },
+        title: { display: true, text: 'ΔE2000', color: '#222222', font: { size: 28, family: "'Share Tech Mono', monospace" } }
       }
     },
     interaction: { mode: 'nearest', axis: 'x', intersect: false }
@@ -3341,25 +3355,32 @@ function renderCCDiagram() {
 
 // ─── PNG Export ───────────────────────────────────────────────────────────────
 
-// Palette for white-background rendering
+// Palette — reference style (light, editorial, max space utilization)
 const PNG = {
-  bg:      '#ffffff',
-  bg2:     '#f5f6f8',
-  bg3:     '#eceef2',
-  border:  '#d0d4de',
-  text:    '#1a1d26',
-  text2:   '#4a4f60',
-  text3:   '#8b90a0',
-  accent:  '#7a0fa8',
-  green:   '#1e8c5a',
-  red:     '#c0392b',
-  orange:  '#c07828',
-  R:       '#c04820',
-  G:       '#2e8020',
-  B:       '#2060b8',
-  W:       '#606060',
-  mono:    'Share Tech Mono, monospace',
-  sans:    'Rajdhani, sans-serif',
+  bg:          '#ffffff',
+  bg2:         '#ffffff',
+  bg3:         '#f5f7fc',
+  border:      '#ECECEC',
+  borderMed:   '#d4d9e8',
+  text:        '#1F2937',
+  text2:       '#374151',
+  text3:       '#7A8594',
+  accent:      '#6b0fa0',
+  green:       '#4FA86F',
+  greenBg:     '#eafbf3',
+  greenBorder: '#a8dfc8',
+  red:         '#D95F4A',
+  redBg:       '#fef2f2',
+  redBorder:   '#f0b0b0',
+  orange:      '#E07A30',
+  orangeBg:    '#fff7e8',
+  R:           '#D95F4A',
+  G:           '#4FA86F',
+  B:           '#4A7DFF',
+  W:           '#596273',
+  mono:        "Inter, 'SF Pro Display', sans-serif",
+  sans:        "Inter, 'SF Pro Display', sans-serif",
+  FONT:        "Inter, 'SF Pro Display', 'IBM Plex Sans', sans-serif",
 };
 
 // Measure text width helper
@@ -3378,52 +3399,71 @@ function roundRect(ctx, x, y, w, h, r, fill, stroke) {
   if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
 }
 
-// Draw header bar
+// Draw page header — full-width title bar matching reference style
 function drawHeader(ctx, W, title, subtitle) {
-  roundRect(ctx, 0, 0, W, 52, 0, PNG.bg2, null);
-  ctx.strokeStyle = PNG.border; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, 52); ctx.lineTo(W, 52); ctx.stroke();
-  ctx.fillStyle = PNG.text; ctx.font = `600 15px ${PNG.sans}`;
-  ctx.textAlign = 'left'; ctx.fillText(title, 20, 22);
+  // White header bar
+  roundRect(ctx, 0, 0, W, 60, 0, '#ffffff', null);
+  ctx.strokeStyle = PNG.border; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, 60); ctx.lineTo(W, 60); ctx.stroke();
+  // Title
+  ctx.fillStyle = PNG.text; ctx.font = `700 18px ${PNG.sans}`;
+  ctx.textAlign = 'left'; ctx.fillText(title, 24, 26);
+  // Subtitle
+  ctx.fillStyle = PNG.text3; ctx.font = `12px ${PNG.mono}`;
+  ctx.fillText(subtitle, 24, 46);
+  // Right branding
   ctx.fillStyle = PNG.text3; ctx.font = `11px ${PNG.mono}`;
-  ctx.fillText(subtitle, 20, 40);
-  // right label
-  ctx.fillStyle = PNG.text3; ctx.font = `10px ${PNG.mono}`;
   ctx.textAlign = 'right';
-  ctx.fillText('Chromatic Data Analyser · CIE 1931', W - 16, 32);
+  ctx.fillText('Chromatic Data Analyser · CIE 1931', W - 24, 36);
 }
 
-// Draw metric card
+// Draw metric card — premium style matching EIZO/Calman reference
 function drawMetricCard(ctx, x, y, w, h, label, value, sub, accentColor) {
-  roundRect(ctx, x, y, w, h, 6, PNG.bg, PNG.border);
-  ctx.fillStyle = accentColor || PNG.text3; ctx.font = `500 10px ${PNG.mono}`;
+  const ac = accentColor || PNG.accent;
+  const FONT = PNG.FONT;
+
+  // Card background with subtle border
+  roundRect(ctx, x, y, w, h, 12, '#ffffff', PNG.border);
+
+  // Left accent bar — 4px wide, full height with rounded left corners
+  ctx.fillStyle = ac;
+  ctx.beginPath();
+  ctx.moveTo(x + 4, y);
+  ctx.lineTo(x + 7, y);
+  ctx.lineTo(x + 7, y + h);
+  ctx.lineTo(x + 4, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - 12);
+  ctx.lineTo(x, y + 12);
+  ctx.quadraticCurveTo(x, y, x + 4, y);
+  ctx.closePath();
+  ctx.fill();
+
+  const TX = x + 20;
+
+  // Channel label — uppercase, small, colored
+  ctx.fillStyle = ac;
+  ctx.font = `700 11px ${FONT}`;
   ctx.textAlign = 'left';
-  ctx.fillText(label, x+12, y+18);
-  ctx.fillStyle = PNG.text; ctx.font = `600 20px ${PNG.mono}`;
-  ctx.fillText(value, x+12, y+42);
+  ctx.letterSpacing = '0.08em';
+  ctx.fillText(label.toUpperCase(), TX, y + 22);
+  ctx.letterSpacing = '';
+
+  // Main KPI value — large, dark
+  ctx.fillStyle = PNG.text;
+  ctx.font = `700 26px ${FONT}`;
+  ctx.fillText(value, TX, y + h - 28);
+
+  // Sub label — small muted
   if (sub) {
-    ctx.fillStyle = PNG.text3; ctx.font = `10px ${PNG.mono}`;
-    ctx.fillText(sub, x+12, y+58);
+    ctx.fillStyle = '#8A93A0';
+    ctx.font = `400 11px ${FONT}`;
+    ctx.fillText(sub, TX, y + h - 10);
   }
 }
 
-// Draw metric card — compact version for export
+// Draw metric card — compact centered version
 function drawMetricCardSmall(ctx, x, y, w, h, label, value, sub, accentColor) {
-  roundRect(ctx, x, y, w, h, 6, PNG.bg, PNG.border);
-  const cx = x + w/2;
-  ctx.textAlign = 'center';
-  // label
-  ctx.fillStyle = accentColor || PNG.text3; ctx.font = `600 13px ${PNG.mono}`;
-  ctx.fillText(label, cx, y+24);
-  // big value
-  ctx.fillStyle = PNG.text; ctx.font = `700 30px ${PNG.mono}`;
-  ctx.fillText(value, cx, y+58);
-  // sub text, centered and wrapped
-  if (sub) {
-    ctx.fillStyle = PNG.text3; ctx.font = `12px ${PNG.mono}`;
-    wrapTextLinesCentered(ctx, sub, cx, y+78, w - 20, 15, h - 78 - 8);
-  }
-  ctx.textAlign = 'left';
+  drawMetricCard(ctx, x, y, w, h, label, value, sub, accentColor);
 }
 
 // Centered word-wrap variant
@@ -3478,8 +3518,8 @@ function wrapTextLines(ctx, text, x, y, maxW, lineH, maxHeight) {
 function reDrawChartWhite(chartInstance, targetCtx, x, y, w, h, overrides) {
   if (!chartInstance || !chartInstance.canvas) return false;
 
-  // Create an offscreen canvas at exact target dimensions (2x for sharpness)
-  const scale = 2;
+  // Create an offscreen canvas at exact target dimensions (3x for sharpness)
+  const scale = 3;
   const offscreen = document.createElement('canvas');
   offscreen.width  = w * scale;
   offscreen.height = h * scale;
@@ -3504,9 +3544,10 @@ function reDrawChartWhite(chartInstance, targetCtx, x, y, w, h, overrides) {
         .replace('rgba(54,179,126,0.08)', 'rgba(54,179,126,0.10)')
         .replace('rgba(79,142,247,0.08)', 'rgba(79,142,247,0.10)');
     }
-    // Thicken lines and points for print quality (3× original, min 6)
-    if (d.borderWidth != null) d.borderWidth = Math.max(6, (d.borderWidth || 2) * 3);
-    if (d.pointRadius != null && d.pointRadius > 0) d.pointRadius = Math.max(8, (d.pointRadius || 4) * 2.5);
+    // Thicken lines and points for print quality (very visible)
+    const lwScale = (overrides && overrides['_lineWidthScale']) ? overrides['_lineWidthScale'] : 1.0;
+    if (d.borderWidth != null) d.borderWidth = Math.max(9, (d.borderWidth || 2) * 4) * lwScale;
+    if (d.pointRadius != null && d.pointRadius > 0) d.pointRadius = Math.max(12, (d.pointRadius || 4) * 3);
     if (d.pointHoverRadius != null) d.pointHoverRadius = d.pointRadius;
     return d;
   });
@@ -3520,7 +3561,7 @@ function reDrawChartWhite(chartInstance, targetCtx, x, y, w, h, overrides) {
       Object.keys(obj).forEach(k => {
         if (typeof obj[k] === 'string') {
           if (obj[k].startsWith('rgba(255,255,255,') || obj[k] === '#555555' || obj[k] === 'rgba(255,255,255,0.05)' || obj[k] === 'rgba(255,255,255,0.07)') {
-            if (obj[k] === '#555555') obj[k] = PNG.text3;
+            if (obj[k] === '#555555' || obj[k] === '#222222') obj[k] = PNG.text;
             else obj[k] = 'rgba(0,0,0,0.08)';
           }
         } else if (typeof obj[k] === 'object') {
@@ -3529,11 +3570,17 @@ function reDrawChartWhite(chartInstance, targetCtx, x, y, w, h, overrides) {
       });
     }
     fixColor(s);
-    // Enlarge tick and title fonts for print readability
-    if (s.ticks && s.ticks.font) s.ticks.font.size = Math.max(16, (s.ticks.font.size || 11) * 1.6);
-    else if (s.ticks) s.ticks.font = { size: 16 };
-    if (s.title && s.title.font) s.title.font.size = Math.max(16, (s.title.font.size || 11) * 1.6);
-    else if (s.title && s.title.display) s.title.font = { size: 16 };
+    // Tick and title fonts — sized for 3× canvas downsampling: size here ÷ 3 = effective px
+    const monoFamily = PNG.mono;
+    if (s.ticks && s.ticks.font) { s.ticks.font.size = 96; s.ticks.font.family = monoFamily; }
+    else if (s.ticks) s.ticks.font = { size: 96, family: monoFamily };
+    if (s.ticks) s.ticks.color = PNG.text;  // dark, high-contrast labels
+    if (s.title && s.title.font) { s.title.font.size = 102; s.title.font.family = monoFamily; }
+    else if (s.title && s.title.display) s.title.font = { size: 102, family: monoFamily };
+    if (s.title) s.title.color = PNG.text2;
+    // Visible axis border line
+    s.border = Object.assign({ display: true, color: 'rgba(0,0,0,0.35)', width: 2 }, s.border || {});
+    if (s.grid) { s.grid.color = 'rgba(0,0,0,0.10)'; s.grid.lineWidth = 1; }
     return s;
   }
 
@@ -3542,6 +3589,15 @@ function reDrawChartWhite(chartInstance, targetCtx, x, y, w, h, overrides) {
   Object.keys(origScales).forEach(k => { lightScales[k] = lightScale(origScales[k]); });
 
   // Apply dot-path overrides to scales, e.g. {'scales.y.min': 98}
+  // Also handle special _rgbTrackTickScale to multiply tick font sizes
+  const tickFontScale = (overrides && overrides['_rgbTrackTickScale']) ? overrides['_rgbTrackTickScale'] : 1.0;
+  if (tickFontScale !== 1.0) {
+    Object.values(lightScales).forEach(s => {
+      if (s && s.ticks && s.ticks.font && s.ticks.font.size) {
+        s.ticks.font.size = Math.round(s.ticks.font.size * tickFontScale);
+      }
+    });
+  }
   if (overrides) {
     Object.entries(overrides).forEach(([path, val]) => {
       const parts = path.split('.');
@@ -3584,7 +3640,7 @@ function reDrawChartWhite(chartInstance, targetCtx, x, y, w, h, overrides) {
 
   // Give Chart.js one tick to finish rendering, then blit
   // (Chart.js with animation:false renders synchronously)
-  targetCtx.fillStyle = PNG.bg;
+  targetCtx.fillStyle = '#ffffff';
   targetCtx.fillRect(x, y, w, h);
   targetCtx.drawImage(offscreen, 0, 0, offscreen.width, offscreen.height, x, y, w, h);
 
@@ -3592,13 +3648,22 @@ function reDrawChartWhite(chartInstance, targetCtx, x, y, w, h, overrides) {
   return true;
 }
 
-// Draw section label
+// Draw section label — premium style: muted uppercase tracking + subtle rule
 function drawSectionLabel(ctx, x, y, W, text) {
-  ctx.fillStyle = PNG.text3; ctx.font = `500 10px ${PNG.mono}`;
+  const FONT = PNG.FONT;
+  const label = text.toUpperCase();
+  ctx.fillStyle = PNG.text3;
+  ctx.font = `600 12px ${FONT}`;
+  ctx.letterSpacing = '0.08em';
   ctx.textAlign = 'left';
-  ctx.fillText(text.toUpperCase(), x, y);
-  ctx.strokeStyle = PNG.border; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(x + tw(ctx, text.toUpperCase()) + 8, y - 4); ctx.lineTo(W - x, y - 4); ctx.stroke();
+  ctx.fillText(label, x, y);
+  ctx.letterSpacing = '';
+  const labelW = tw(ctx, label) + 12;
+  ctx.strokeStyle = '#EAEAEA'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + labelW, y - 4);
+  ctx.lineTo(W - x, y - 4);
+  ctx.stroke();
 }
 
 // Collect metric cards from a DOM container
@@ -3631,7 +3696,7 @@ function downloadCanvas(canvas, filename) {
 
 // Create a 2× hi-res canvas with ctx pre-scaled, returns {canvas, ctx}
 function makeHiResCanvas(W, H) {
-  const SCALE = 2;
+  const SCALE = 3;
   const c = document.createElement('canvas');
   c.width = W * SCALE; c.height = H * SCALE;
   const ctx = c.getContext('2d');
@@ -3662,88 +3727,322 @@ function showPreview(canvas) {
 // ── Individual exports ────────────────────────────────────────────────────────
 
 function buildChromaImage() {
-  const W = 1040, PAD = 20;
+  const W = 1040, PAD = 24;
   const metrics = collectMetrics('chromaCards');
-  const cardH = 76, CARDS = metrics.length;
-  const H = 52 + 14 + 36 + 260 + 14 + 36 + 260 + 14 + 36 + (CARDS > 0 ? cardH + 14 : 0) + PAD*2;
+  const cardH = 88, CARDS = metrics.length;
+  const CHART_H = 300;
+  const H = PAD + 36 + 16 + CHART_H + 20 + 36 + 16 + CHART_H + 20 + (CARDS > 0 ? 36 + cardH + 16 : 0) + PAD;
   const { canvas: c, ctx } = makeHiResCanvas(W, H);
   ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
-  drawHeader(ctx, W, 'Chromatyczność — odchylenie od D65', 'Δx · Δy · CIE 1931');
-  let cy = 52 + PAD;
-  drawSectionLabel(ctx, PAD, cy + 10, W, 'Δx — odchylenie od D65 (x_D65 = 0.3127)');
-  cy += 22;
-  roundRect(ctx, PAD, cy, W-PAD*2, 250, 6, PNG.bg, PNG.border);
-  reDrawChartWhite(charts['dx'], ctx, PAD+10, cy+10, W-PAD*2-20, 230);
-  cy += 264;
-  drawSectionLabel(ctx, PAD, cy + 10, W, 'Δy — odchylenie od D65 (y_D65 = 0.3290)');
-  cy += 22;
-  roundRect(ctx, PAD, cy, W-PAD*2, 250, 6, PNG.bg, PNG.border);
-  reDrawChartWhite(charts['dy'], ctx, PAD+10, cy+10, W-PAD*2-20, 230);
-  cy += 264;
+  let cy = PAD;
+
+  // Chart 1
+  ctx.fillStyle = PNG.text; ctx.font = `700 14px ${PNG.sans}`;
+  ctx.textAlign = 'left';
+  ctx.fillText('Δx — ODCHYLENIE OD D65 (x_D65 = 0.3127)', PAD, cy + 14);
+  cy += 30;
+  ctx.strokeStyle = PNG.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, cy - 6); ctx.lineTo(W - PAD, cy - 6); ctx.stroke();
+  roundRect(ctx, PAD, cy, W - PAD * 2, CHART_H, 10, PNG.bg2, PNG.border);
+  reDrawChartWhite(charts['dx'], ctx, PAD + 12, cy + 12, W - PAD * 2 - 24, CHART_H - 24);
+  cy += CHART_H + 20;
+
+  // Chart 2
+  ctx.fillStyle = PNG.text; ctx.font = `700 14px ${PNG.sans}`;
+  ctx.fillText('Δy — ODCHYLENIE OD D65 (y_D65 = 0.3290)', PAD, cy + 14);
+  cy += 30;
+  ctx.strokeStyle = PNG.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, cy - 6); ctx.lineTo(W - PAD, cy - 6); ctx.stroke();
+  roundRect(ctx, PAD, cy, W - PAD * 2, CHART_H, 10, PNG.bg2, PNG.border);
+  reDrawChartWhite(charts['dy'], ctx, PAD + 12, cy + 12, W - PAD * 2 - 24, CHART_H - 24);
+  cy += CHART_H + 20;
+
   if (CARDS > 0) {
-    drawSectionLabel(ctx, PAD, cy + 10, W, 'Podsumowanie');
-    cy += 22;
-    const cw = Math.floor((W - PAD*2 - (CARDS-1)*8) / CARDS);
+    drawSectionLabel(ctx, PAD, cy + 14, W, 'Podsumowanie');
+    cy += 30;
+    const cw = Math.floor((W - PAD * 2 - (CARDS - 1) * 10) / CARDS);
     metrics.forEach((m, i) => {
       const color = m.label.includes('R') ? PNG.R : m.label.includes('G') ? PNG.G : m.label.includes('B') ? PNG.B : PNG.W;
-      drawMetricCard(ctx, PAD + i*(cw+8), cy, cw, cardH, m.label, m.value, m.sub, color);
+      drawMetricCard(ctx, PAD + i * (cw + 10), cy, cw, cardH, m.label, m.value, m.sub, color);
     });
   }
   return c;
 }
 
 function buildRGBTrackImage() {
-  const W = 1040, PAD = 20;
-  const metrics = collectMetrics('rgbTrackCards');
-  const cardH = 110; // taller for larger centered fonts
-  const CHART_H = 360;
-  const H = 52 + PAD + 36 + 20 + CHART_H + 14 + (metrics.length > 0 ? 36 + cardH + 14 : 0) + PAD;
-  const { canvas: c, ctx } = makeHiResCanvas(W, H);
-  ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
-  drawHeader(ctx, W, 'RGB Tracking — gain kanałów R / G / B', 'Wartość idealna: 100% · dane źródłowe: kanał W');
-  let cy = 52 + PAD;
-  drawSectionLabel(ctx, PAD, cy+10, W, 'Gain R / G / B [%] — wartość idealna: 100');
-  cy += 22;
-  // legend
-  [['Red', PNG.R],['Green', PNG.G],['Blue', PNG.B]].forEach(([lbl, col], i) => {
+  // ── Premium 1920×1080 dashboard — EIZO/Calman aesthetic ──────────────────────
+  const W = 1920, H = 1080, PAD = 64;
+
+  const C = {
+    bg:       '#FFFFFF',
+    text:     '#1F2937',
+    textSub:  '#7A8594',
+    textAxis: '#596273',
+    grid:     '#EAEAEA',
+    ref:      '#8A95A3',
+    tolFill:  'rgba(79,168,111,0.08)',
+    R:        '#D95F4A',
+    G:        '#4FA86F',
+    B:        '#4A7DFF',
+    cardBorder: '#ECECEC',
+  };
+  const FONT = "Inter, 'SF Pro Display', 'IBM Plex Sans', sans-serif";
+
+  const SCALE = 2;
+  const c = document.createElement('canvas');
+  c.width = W * SCALE; c.height = H * SCALE;
+  c._logicalWidth = W; c._logicalHeight = H;
+  const ctx = c.getContext('2d');
+  ctx.scale(SCALE, SCALE);
+
+  // Background — pure white
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+
+  let cy = PAD;
+
+  // ── Header ────────────────────────────────────────────────────────────────────
+  ctx.fillStyle = C.text;
+  ctx.font = `700 40px ${FONT}`;
+  ctx.letterSpacing = '0.02em';
+  ctx.textAlign = 'left';
+  ctx.fillText('GAIN R / G / B [%]', PAD, cy + 40);
+  ctx.letterSpacing = '';
+  cy += 40 + 16;
+
+  // Colored channel bars: 80px each, 12px gap, 3px tall
+  const bars = [C.R, C.G, C.B];
+  bars.forEach((col, i) => {
     ctx.fillStyle = col;
-    ctx.fillRect(PAD + i*100, cy+2, 28, 4);
-    ctx.fillStyle = PNG.text; ctx.font = `500 12px ${PNG.sans}`; ctx.textAlign = 'left';
-    ctx.fillText(lbl, PAD + i*100 + 34, cy+8);
+    ctx.fillRect(PAD + i * (80 + 12), cy, 80, 3);
   });
-  cy += 20;
+  cy += 3 + 36;
 
-  // ── Use the SAME Y range as the on-screen preview (resolved runtime bounds) ─
+  // ── Chart area setup ─────────────────────────────────────────────────────────
+  const CARD_H = 110, CARD_GAP = 24;
+  const SUMMARY_LABEL_H = 32;
+  const CHART_TOP = cy;
+  const CHART_BOT = H - PAD - SUMMARY_LABEL_H - CARD_H - 48;
+  const CHART_H = CHART_BOT - CHART_TOP;
+  const CHART_LEFT = PAD + 100;
+  const CHART_RIGHT = W - PAD - 180;
+  const CHART_W = CHART_RIGHT - CHART_LEFT;
+
   const ch = charts['rgbTrack'];
-  let exportYMin, exportYMax;
-  if (ch && ch.scales && ch.scales.y) {
-    exportYMin = ch.scales.y.min;
-    exportYMax = ch.scales.y.max;
+  const datasets = (ch && ch.config && ch.config.data && ch.config.data.datasets) ? ch.config.data.datasets : [];
+  const labels   = (ch && ch.config && ch.config.data && ch.config.data.labels)   ? ch.config.data.labels   : [];
+
+  const series = [];
+  const seriesDef = [
+    { key: 'Red',   color: C.R },
+    { key: 'Green', color: C.G },
+    { key: 'Blue',  color: C.B },
+  ];
+  seriesDef.forEach(sd => {
+    const ds = datasets.find(d => d.label === sd.key);
+    if (ds) series.push({ label: sd.key, color: sd.color, data: ds.data.map(v => typeof v === 'object' ? v.y : v) });
+  });
+
+  const allVals = series.flatMap(s => s.data).filter(v => v != null && !isNaN(v));
+  let yMin = 97.3, yMax = 101.8;
+  if (allVals.length > 0) {
+    const dMin = Math.min(...allVals), dMax = Math.max(...allVals);
+    const span = Math.max(dMax - dMin, 2.0);
+    // Padding: 20% zakresu danych, minimum 1.5 pp
+    const pad = Math.max(span * 0.20, 1.5);
+    // Snap do 0.5 pp
+    yMin = Math.floor((dMin - pad) * 2) / 2;
+    yMax = Math.ceil( (dMax + pad) * 2) / 2;
+    // Minimalna rozpiętość: 5 pp
+    if (yMax - yMin < 5) {
+      const mid = (yMin + yMax) / 2;
+      yMin = Math.floor((mid - 2.5) * 2) / 2;
+      yMax = Math.ceil( (mid + 2.5) * 2) / 2;
+    }
   }
 
-  roundRect(ctx, PAD, cy, W-PAD*2, CHART_H, 6, PNG.bg, PNG.border);
-  const yOverrides = {};
-  if (exportYMin != null) yOverrides['scales.y.min'] = exportYMin;
-  if (exportYMax != null) yOverrides['scales.y.max'] = exportYMax;
-  reDrawChartWhite(ch, ctx, PAD+10, cy+10, W-PAD*2-20, CHART_H-20, yOverrides);
-  cy += CHART_H + 14;
-  if (metrics.length > 0) {
-    drawSectionLabel(ctx, PAD, cy+10, W, 'Podsumowanie');
-    cy += 22;
-    const cols = Math.min(metrics.length, 4);
-    const cw = Math.floor((W - PAD*2 - (cols-1)*8) / cols);
-    metrics.forEach((m, i) => {
-      const row = Math.floor(i/cols), col2 = i%cols;
-      const cardX = PAD + col2*(cw+8), cardY = cy + row*(cardH+8);
-      const isAssessment = !m.value || /ocena/i.test(m.label);
-      if (isAssessment) {
-        drawAssessmentCard(ctx, cardX, cardY, cw, cardH, m);
-      } else {
-        const color = m.label.includes('Red') ? PNG.R : m.label.includes('Green') ? PNG.G : m.label.includes('Blue') ? PNG.B : PNG.text3;
-        drawMetricCardSmall(ctx, cardX, cardY, cw, cardH, m.label, m.value, m.sub, color);
-      }
-    });
+  const xCount = labels.length;
+  const toX = i  => CHART_LEFT + (i / Math.max(xCount - 1, 1)) * CHART_W;
+  const toY = v  => CHART_TOP  + (1 - (v - yMin) / (yMax - yMin)) * CHART_H;
+
+  // ── Horizontal grid lines ────────────────────────────────────────────────────
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+  const yRange = yMax - yMin;
+  const yStep = yRange > 16 ? 5 : yRange > 8 ? 2 : 1;
+  for (let yv = Math.ceil(yMin / yStep) * yStep; yv <= yMax; yv += yStep) {
+    const gy = toY(yv);
+    ctx.beginPath(); ctx.moveTo(CHART_LEFT, gy); ctx.lineTo(CHART_RIGHT, gy); ctx.stroke();
+    ctx.fillStyle = '#1F2937'; ctx.font = `600 25px ${FONT}`; ctx.textAlign = 'right';
+    ctx.fillText(yv.toFixed(0) + '%', CHART_LEFT - 14, gy + 7);
   }
+
+  // ── Tolerance zone ±0.5% dashed forks — ukryj gdy zakres > 15 pp (niewidoczne) ──
+  const forkTop = toY(100.5), forkBot = toY(99.5);
+  // Pokaż tylko gdy ±0.5% zajmuje co najmniej 2% wysokości wykresu
+  const forkVisible = (forkBot - forkTop) / CHART_H > 0.02;
+  if (forkVisible) {
+  ctx.strokeStyle = 'rgba(100,140,100,0.55)'; ctx.lineWidth = 1.8;
+  ctx.setLineDash([10, 7]);
+  ctx.beginPath(); ctx.moveTo(CHART_LEFT, forkTop); ctx.lineTo(CHART_RIGHT, forkTop); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CHART_LEFT, forkBot); ctx.lineTo(CHART_RIGHT, forkBot); ctx.stroke();
+  ctx.setLineDash([]);
+  }
+
+  // ── Axis labels ───────────────────────────────────────────────────────────────
+  // X tick labels
+  ctx.fillStyle = '#1F2937'; ctx.font = `600 25px ${FONT}`; ctx.textAlign = 'center';
+  labels.forEach((lbl, i) => {
+    ctx.fillText(String(lbl), toX(i), CHART_BOT + 30);
+  });
+  // X axis title
+  ctx.fillStyle = '#1F2937'; ctx.font = `600 28px ${FONT}`; ctx.textAlign = 'center';
+  ctx.fillText('Poziom sygnału', CHART_LEFT + CHART_W / 2, CHART_BOT + 60);
+  // Y axis title — rotated
+  ctx.save();
+  ctx.translate(PAD + 14, CHART_TOP + CHART_H / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#1F2937'; ctx.font = `600 28px ${FONT}`; ctx.textAlign = 'center';
+  ctx.fillText('Gain [%]', 0, 0);
+  ctx.restore();
+
+  // ── Helper: Catmull-Rom bezier spline matching Chart.js tension:0.3 ─────────
+  function drawSmoothedLine(ctx, points) {
+    if (points.length < 2) return;
+    if (points.length === 2) {
+      ctx.moveTo(points[0].x, points[0].y);
+      ctx.lineTo(points[1].x, points[1].y);
+      return;
+    }
+    const t = 0.3;
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? 0 : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2 < points.length ? i + 2 : points.length - 1];
+      const cp1x = p1.x + (p2.x - p0.x) * t / 2;
+      const cp1y = p1.y + (p2.y - p0.y) * t / 2;
+      const cp2x = p2.x - (p3.x - p1.x) * t / 2;
+      const cp2y = p2.y - (p3.y - p1.y) * t / 2;
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    }
+  }
+
+  // ── RGB curves ────────────────────────────────────────────────────────────────
+  series.forEach(s => {
+    if (!s.data || s.data.length === 0) return;
+    const valid = s.data.map((v, i) => ({ v, i })).filter(p => p.v != null && !isNaN(p.v));
+    if (valid.length === 0) return;
+
+    const pts = valid.map(p => ({ x: toX(p.i), y: toY(p.v) }));
+
+    // Smooth line via Catmull-Rom bezier (identyczny efekt jak Chart.js tension:0.3)
+    ctx.strokeStyle = s.color; ctx.lineWidth = 7;
+    ctx.setLineDash([]);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath();
+    drawSmoothedLine(ctx, pts);
+    ctx.stroke();
+
+    // Measurement point markers — 12px diameter, white border 2.5px
+    valid.forEach(p => {
+      const px = toX(p.i), py = toY(p.v);
+      // White border ring
+      ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF'; ctx.fill();
+      // Colored fill
+      ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2);
+      ctx.fillStyle = s.color; ctx.fill();
+    });
+
+    // End-of-line label — stacked by channel index to avoid overlap
+    const last = valid[valid.length - 1];
+    const avg = valid.reduce((sum, p) => sum + p.v, 0) / valid.length;
+    const lx = toX(last.i) + 18;
+    const channelIdx = series.indexOf(s);
+    const labelBaseY = CHART_TOP + 40 + channelIdx * 64;
+    const labelName = s.label;
+    // Connector dot
+    ctx.beginPath(); ctx.arc(lx - 10, labelBaseY - 8, 5, 0, Math.PI * 2);
+    ctx.fillStyle = s.color; ctx.fill();
+    ctx.fillStyle = s.color;
+    ctx.font = `700 24px ${FONT}`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`${labelName}`, lx, labelBaseY);
+    ctx.font = `600 20px ${FONT}`;
+    ctx.fillText(`${avg.toFixed(1)}%`, lx, labelBaseY + 26);
+  });
+
+  cy = CHART_BOT + 68;
+
+  // ── KPI section label ─────────────────────────────────────────────────────────
+  ctx.fillStyle = C.textSub;
+  ctx.font = `600 13px ${FONT}`;
+  ctx.letterSpacing = '0.08em';
+  ctx.textAlign = 'left';
+  ctx.fillText('PODSUMOWANIE', PAD, cy + 14);
+  ctx.letterSpacing = '';
+  // Rule line
+  const lblW = ctx.measureText('PODSUMOWANIE').width + 16;
+  ctx.strokeStyle = '#EAEAEA'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD + lblW, cy + 10); ctx.lineTo(W - PAD, cy + 10); ctx.stroke();
+  cy += SUMMARY_LABEL_H;
+
+  // ── KPI cards — 3 columns ────────────────────────────────────────────────────
+  const metrics = collectMetrics('rgbTrackCards').filter(m => m.value && !/ocena/i.test(m.label));
+  const cols = 3;
+  const availW = W - PAD * 2;
+  const cw = Math.floor((availW - (cols - 1) * CARD_GAP) / cols);
+
+  const kpiDefs = [
+    { label: 'RED GAIN',   color: C.R },
+    { label: 'GREEN GAIN', color: C.G },
+    { label: 'BLUE GAIN',  color: C.B },
+  ];
+
+  kpiDefs.forEach((kd, i) => {
+    const m = metrics.find(mx => mx.label.toUpperCase().includes(kd.label.split(' ')[0])) || metrics[i] || null;
+    const cx2 = PAD + i * (cw + CARD_GAP);
+    const cy2 = cy;
+
+    // Subtle shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.018)';
+    roundRect(ctx, cx2 + 2, cy2 + 3, cw, CARD_H, 12, 'rgba(0,0,0,0.018)', null);
+
+    // Card background
+    roundRect(ctx, cx2, cy2, cw, CARD_H, 12, '#FFFFFF', C.cardBorder);
+
+    // Left accent bar — 4px wide with rounded left corners
+    ctx.fillStyle = kd.color;
+    ctx.beginPath();
+    ctx.moveTo(cx2 + 4, cy2);
+    ctx.lineTo(cx2 + 8, cy2);
+    ctx.lineTo(cx2 + 8, cy2 + CARD_H);
+    ctx.lineTo(cx2 + 4, cy2 + CARD_H);
+    ctx.quadraticCurveTo(cx2, cy2 + CARD_H, cx2, cy2 + CARD_H - 12);
+    ctx.lineTo(cx2, cy2 + 12);
+    ctx.quadraticCurveTo(cx2, cy2, cx2 + 4, cy2);
+    ctx.closePath(); ctx.fill();
+
+    const TX = cx2 + 22;
+
+    // Channel name label
+    ctx.fillStyle = kd.color;
+    ctx.font = `700 14px ${FONT}`;
+    ctx.letterSpacing = '0.08em';
+    ctx.textAlign = 'left';
+    ctx.fillText(kd.label, TX, cy2 + 28);
+    ctx.letterSpacing = '';
+
+    // Main KPI value — 26px per spec
+    const val = m ? m.value : '—';
+    ctx.fillStyle = C.text;
+    ctx.font = `700 36px ${FONT}`;
+    ctx.fillText(val, TX, cy2 + 76);
+
+    // Sub description
+    ctx.fillStyle = '#8A93A0';
+    ctx.font = `400 11px ${FONT}`;
+    ctx.fillText('średnia · odchylenie od 100%', TX, cy2 + 96);
+  });
+
   return c;
 }
 
@@ -3771,59 +4070,62 @@ function drawAssessmentCard(ctx, x, y, w, h, m) {
 }
 
 function buildDEImage() {
-  const W = 1040, PAD = 20;
+  const W = 1040, PAD = 24;
   const metrics = collectMetrics('deCards');
-  const cardH = 76;
-  // Count per-channel blocks
+  const cardH = 88;
   const perChBlocks = document.querySelectorAll('#dePerChannelWrap .de-ch-block');
-  const perChH = perChBlocks.length * (220 + 8);
-  const H = 52 + PAD + 36 + 270 + 8 + 36 + 270 + 14 + 36 + (metrics.length > 0 ? cardH + 14 : 0) + (perChBlocks.length > 0 ? 36 + perChH : 0) + PAD;
+  const CHART_H = 280;
+  let cyCalc = PAD;
+  cyCalc += 30 + CHART_H + 20; // section + chart1
+  cyCalc += 30 + CHART_H + 20; // section + chart2
+  if (metrics.length > 0) cyCalc += 36 + cardH + 20;
+  if (perChBlocks.length > 0) cyCalc += 36 + perChBlocks.length * 228;
+  cyCalc += PAD;
+  const H = cyCalc;
+
   const { canvas: c, ctx } = makeHiResCanvas(W, H);
   ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
-  drawHeader(ctx, W, 'Błędy koloru ΔE — drift względem D65', 'ΔE2000 · ΔE ITP · chromatyczność znormalizowana do Y=100');
-  let cy = 52 + PAD;
-  drawSectionLabel(ctx, PAD, cy+10, W, 'ΔE2000 — drift względem punktu 100% kanału');
-  cy += 22;
-  roundRect(ctx, PAD, cy, W-PAD*2, 260, 6, PNG.bg, PNG.border);
-  reDrawChartWhite(charts['de2'], ctx, PAD+10, cy+10, W-PAD*2-20, 240);
-  cy += 274;
-  drawSectionLabel(ctx, PAD, cy+10, W, 'ΔE ITP — drift HDR');
-  cy += 22;
-  roundRect(ctx, PAD, cy, W-PAD*2, 260, 6, PNG.bg, PNG.border);
-  reDrawChartWhite(charts['deITP'], ctx, PAD+10, cy+10, W-PAD*2-20, 240);
-  cy += 274;
+  let cy = PAD;
+
+  ctx.fillStyle = PNG.text; ctx.font = `700 14px ${PNG.sans}`; ctx.textAlign = 'left';
+  ctx.fillText('ΔE2000 — DRIFT WZGLĘDEM PUNKTU 100% KANAŁU', PAD, cy + 14);
+  cy += 24; ctx.strokeStyle = PNG.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, cy); ctx.lineTo(W - PAD, cy); ctx.stroke(); cy += 6;
+  roundRect(ctx, PAD, cy, W - PAD * 2, CHART_H, 10, PNG.bg2, PNG.border);
+  reDrawChartWhite(charts['de2'], ctx, PAD + 12, cy + 12, W - PAD * 2 - 24, CHART_H - 24);
+  cy += CHART_H + 20;
+
+  ctx.fillStyle = PNG.text; ctx.font = `700 14px ${PNG.sans}`;
+  ctx.fillText('ΔE ITP — DRIFT HDR', PAD, cy + 14);
+  cy += 24; ctx.strokeStyle = PNG.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, cy); ctx.lineTo(W - PAD, cy); ctx.stroke(); cy += 6;
+  roundRect(ctx, PAD, cy, W - PAD * 2, CHART_H, 10, PNG.bg2, PNG.border);
+  reDrawChartWhite(charts['deITP'], ctx, PAD + 12, cy + 12, W - PAD * 2 - 24, CHART_H - 24);
+  cy += CHART_H + 20;
+
   if (metrics.length > 0) {
-    drawSectionLabel(ctx, PAD, cy+10, W, 'Podsumowanie');
-    cy += 22;
+    drawSectionLabel(ctx, PAD, cy + 14, W, 'Podsumowanie');
+    cy += 30;
     const cols = Math.min(metrics.length, 4);
-    const cw = Math.floor((W - PAD*2 - (cols-1)*8) / cols);
+    const cw = Math.floor((W - PAD * 2 - (cols - 1) * 10) / cols);
     metrics.forEach((m, i) => {
       const color = m.label.includes('R') ? PNG.R : m.label.includes('G') ? PNG.G : m.label.includes('B') ? PNG.B : PNG.W;
-      drawMetricCard(ctx, PAD + i*(cw+8), cy, cw, cardH, m.label, m.value, m.sub, color);
+      drawMetricCard(ctx, PAD + i * (cw + 10), cy, cw, cardH, m.label, m.value, m.sub, color);
     });
-    cy += cardH + 14;
+    cy += cardH + 20;
   }
-  // Per-channel charts
   if (perChBlocks.length > 0) {
-    drawSectionLabel(ctx, PAD, cy+10, W, 'Błędy ΔE per kanał');
-    cy += 22;
-    ['R','G','B','W'].forEach(ch => {
-      const c2 = charts['de2_'+ch], c3 = charts['deITP_'+ch];
+    drawSectionLabel(ctx, PAD, cy + 14, W, 'Błędy ΔE per kanał');
+    cy += 30;
+    ['R', 'G', 'B', 'W'].forEach(ch => {
+      const c2 = charts['de2_' + ch], c3 = charts['deITP_' + ch];
       if (!c2 && !c3) return;
       const color = COLORS[ch];
-      roundRect(ctx, PAD, cy, W-PAD*2, 210, 6, PNG.bg2, PNG.border);
-      ctx.fillStyle = color; ctx.font = `600 13px ${PNG.mono}`; ctx.textAlign = 'left';
-      ctx.fillText('Kanał ' + ch, PAD+12, cy+18);
-      const hw = Math.floor((W-PAD*2-8)/2 - 8);
-      if (c2) {
-        roundRect(ctx, PAD+8, cy+24, hw, 178, 4, PNG.bg, PNG.border);
-        reDrawChartWhite(c2, ctx, PAD+8+6, cy+24+6, hw-12, 166);
-      }
-      if (c3) {
-        roundRect(ctx, PAD+8+hw+8, cy+24, hw, 178, 4, PNG.bg, PNG.border);
-        reDrawChartWhite(c3, ctx, PAD+8+hw+8+6, cy+24+6, hw-12, 166);
-      }
-      cy += 218;
+      roundRect(ctx, PAD, cy, W - PAD * 2, 220, 10, PNG.bg2, PNG.border);
+      ctx.fillStyle = color; ctx.font = `700 13px ${PNG.sans}`; ctx.textAlign = 'left';
+      ctx.fillText('Kanał ' + ch, PAD + 14, cy + 20);
+      const hw = Math.floor((W - PAD * 2 - 10) / 2 - 10);
+      if (c2) { roundRect(ctx, PAD + 8, cy + 28, hw, 184, 6, PNG.bg, PNG.border); reDrawChartWhite(c2, ctx, PAD + 16, cy + 36, hw - 16, 168); }
+      if (c3) { roundRect(ctx, PAD + 8 + hw + 10, cy + 28, hw, 184, 6, PNG.bg, PNG.border); reDrawChartWhite(c3, ctx, PAD + 16 + hw + 10, cy + 36, hw - 16, 168); }
+      cy += 228;
     });
   }
   return c;
@@ -3833,11 +4135,10 @@ function buildGrayscaleImage() {
   const W = 1040, PAD = 20;
   const metrics = collectMetrics('gsCards');
   const cardH = 76, cols = Math.min(metrics.length, 5);
-  const H = 52 + PAD + 36 + 310 + 14 + 36 + (metrics.length > 0 ? cardH + 14 : 0) + PAD;
+  const H = PAD + 36 + 310 + 14 + 36 + (metrics.length > 0 ? cardH + 14 : 0) + PAD;
   const { canvas: c, ctx } = makeHiResCanvas(W, H);
   ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
-  drawHeader(ctx, W, 'Grayscale — stabilność punktu bieli (kanał W)', 'Δx · Δy od D65 · WB ΔE2000 w funkcji poziomu sygnału');
-  let cy = 52 + PAD;
+  let cy = PAD;
   drawSectionLabel(ctx, PAD, cy+10, W, 'Tracking punktu bieli · WB ΔE2000');
   cy += 22;
   const hw = Math.floor((W - PAD*2 - 8) / 2);
@@ -3862,12 +4163,11 @@ function buildAPLImage() {
   const W = 1040, PAD = 20;
   const metrics = collectMetrics('aplMetrics');
   const cardH = 76, cols = Math.min(metrics.length, 5);
-  const H = 52 + PAD + 36 + 370 + 14 + 36 + (metrics.length > 0 ? cardH + 14 : 0) + PAD;
+  const H = PAD + 36 + 370 + 14 + 36 + (metrics.length > 0 ? cardH + 14 : 0) + PAD;
   const { canvas: c, ctx } = makeHiResCanvas(W, H);
   ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
   const devName = (document.getElementById('aplDeviceName') || {}).value || 'Urządzenie';
-  drawHeader(ctx, W, 'APL Brightness — luminancja w funkcji wypełnienia', devName);
-  let cy = 52 + PAD;
+  let cy = PAD;
   drawSectionLabel(ctx, PAD, cy+10, W, 'Jasność matrycy [cd/m²] vs APL [%]');
   cy += 22;
   roundRect(ctx, PAD, cy, W-PAD*2, 360, 6, PNG.bg, PNG.border);
@@ -3897,18 +4197,17 @@ function buildCCImage() {
   const DIAG_W = W - PAD*2;
   const DIAG_H = Math.round(DIAG_W * 0.78); // ~810×632 — good CIE proportions
   const tableH = rows.length > 0 ? 26 + rows.length * 24 + 14 : 0;
-  const H = 52 + PAD + 36 + DIAG_H + 14 + (tableH > 0 ? 36 + tableH : 0) + PAD;
+  const H = PAD + 36 + DIAG_H + 14 + (tableH > 0 ? 36 + tableH : 0) + PAD;
 
   // Use 2× pixel ratio for crisp output
-  const SCALE = 2;
+  const SCALE = 3;
   const c = document.createElement('canvas');
   c.width = W * SCALE; c.height = Math.max(H, 200) * SCALE;
   const ctx = c.getContext('2d');
   ctx.scale(SCALE, SCALE);
   ctx.fillStyle = PNG.bg; ctx.fillRect(0, 0, W, H);
 
-  drawHeader(ctx, W, 'Colour Checker — CIE 1931 xy', 'Macbeth ColorChecker 24 · pomiary vs referencja D50');
-  let cy = 52 + PAD;
+  let cy = PAD;
   drawSectionLabel(ctx, PAD, cy+10, W, 'Diagram CIE 1931 xy');
   cy += 22;
 

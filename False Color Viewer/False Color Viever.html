@@ -134,7 +134,7 @@ main {
 
 /* ── SIDEBAR ── */
 .sidebar {
-  width: 300px;
+  width: 420px;
   flex-shrink: 0;
   background: var(--surface);
   border-right: 1px solid var(--border);
@@ -148,10 +148,9 @@ main {
 .sidebar::-webkit-scrollbar-track { background: transparent; }
 .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* Two-column row layout inside sidebar → stacked single column when narrow */
+/* Two-column row layout inside sidebar */
 .sidebar-cols {
   display: flex;
-  flex-direction: column;
   gap: 0;
   flex: 1;
   border-bottom: 1px solid var(--border);
@@ -163,8 +162,7 @@ main {
   min-width: 0;
 }
 .sidebar-col:first-child {
-  border-right: none;
-  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
 }
 
 .section {
@@ -448,17 +446,17 @@ select:hover { border-color: var(--accent); }
 #grid-results-wrap::-webkit-scrollbar { height: 3px; }
 #grid-results-wrap::-webkit-scrollbar-thumb { background: var(--border); }
 .grid-table {
-  border-collapse: collapse; font-size: var(--fs-xs);
+  border-collapse: collapse; font-size: 16px;
   font-family: var(--mono); color: var(--text); width: 100%;
 }
 .grid-table th {
   background: var(--surface2); color: var(--muted);
-  letter-spacing: 1px; padding: 4px 5px;
+  letter-spacing: 1px; padding: 5px 7px;
   border: 1px solid var(--border); text-align: center;
   font-weight: normal; white-space: nowrap;
 }
 .grid-table td {
-  padding: 3px 5px; border: 1px solid var(--border);
+  padding: 4px 7px; border: 1px solid var(--border);
   text-align: right; white-space: nowrap;
 }
 .grid-table td:first-child { text-align: center; color: var(--muted); letter-spacing: 0; }
@@ -786,10 +784,7 @@ select:hover { border-color: var(--accent); }
         <input class="grid-spinner" id="grid-rows" type="number" min="1" max="4" value="2">
       </div>
       <div id="roi-panel"></div>
-      <div id="grid-export-btns" style="display:none; flex-direction:column; gap:4px; margin-top:5px;">
-        <button class="btn-export-grid" id="btn-export-grid-csv">↓ Pobierz CSV</button>
-        <button class="btn-export-grid" id="btn-export-grid-word" style="border-color:var(--accent);color:var(--accent);">⎘ Kopiuj tabelę do Worda</button>
-      </div>
+      <button class="btn-export-grid" id="btn-export-grid-csv" style="display:none;">↓ Export Grid CSV</button>
     </div>
 
     <!-- Export -->
@@ -1817,8 +1812,8 @@ class ROIManager {
               const cellCy = cy + ch/2;
 
               // Adaptive font size based on cell size
-              const fontSize = Math.max(8, Math.min(16, cw / 6, ch / 3));
-              const unitSize = Math.max(6, fontSize * 0.65);
+              const fontSize = Math.max(10, Math.min(20, cw / 4.8, ch / 2.4));
+              const unitSize = Math.max(7, fontSize * 0.65);
 
               // Main value
               ctx.font = `bold ${fontSize}px "Share Tech Mono"`;
@@ -1947,8 +1942,8 @@ class Exporter {
         const cellCy = cy + ch/2;
 
         // Font size: generous for export (min 12px, scales with cell)
-        const fontSize = Math.max(12, Math.min(32, cw/5, ch/2.5));
-        const unitSize = Math.max(9, fontSize * 0.6);
+        const fontSize = Math.max(15, Math.min(40, cw/4, ch/2));
+        const unitSize = Math.max(11, fontSize * 0.6);
 
         ctx.font = `bold ${fontSize}px "Arial", sans-serif`;
         const tw = ctx.measureText(txt).width;
@@ -2288,7 +2283,7 @@ class App {
     document.getElementById('btn-roi-grid').addEventListener('click', () => this._setROIMode('grid'));
     document.getElementById('btn-roi-clear').addEventListener('click', () => {
       this.roi.clear(); this._clearROIStats(); this._rerenderOverlay();
-      document.getElementById('grid-export-btns').style.display='none';
+      document.getElementById('btn-export-grid-csv').style.display='none';
     });
 
     // Grid steppers — custom +/− buttons wired to hidden inputs
@@ -2526,7 +2521,7 @@ class App {
   _onROIUpdate(data) {
     if (data.type==='clear') {
       this._clearROIStats();
-      document.getElementById('grid-export-btns').style.display='none';
+      document.getElementById('btn-export-grid-csv').style.display='none';
     } else if (data.type==='rect-preview') {
       // no panel update on drag preview
     } else {
@@ -2543,7 +2538,7 @@ class App {
 
     if (!hasPoints && !hasRect && !hasGrid) {
       this._clearROIStats();
-      document.getElementById('grid-export-btns').style.display='none';
+      document.getElementById('btn-export-grid-csv').style.display='none';
       return;
     }
 
@@ -2634,7 +2629,7 @@ class App {
         html += `<div style="font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:1px;">wartości: średnia [cd/m²] · hover = szczegóły</div>`;
         html += `<button class="btn-copy" id="btn-copy-grid">⎘ Kopiuj do Excela</button>`;
       }
-      document.getElementById('grid-export-btns').style.display='flex';
+      document.getElementById('btn-export-grid-csv').style.display = 'block';
 
       // Wire CSV export
       document.getElementById('btn-export-grid-csv').onclick = () => {
@@ -2651,68 +2646,8 @@ class App {
         const base = this.state.filename.replace('.h5','') || 'lmk';
         a.download = `${base}-grid-${cols}x${rows}.csv`; a.click();
       };
-
-      // Wire Word export — copies HTML table to clipboard (Word pastes it as a real table)
-      document.getElementById('btn-export-grid-word').onclick = () => {
-        const btn = document.getElementById('btn-export-grid-word');
-
-        // Build HTML table
-        let tableHtml = `<table border="1" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;">`;
-        // Header row
-        tableHtml += `<tr><th style="background:#f2f2f2;padding:6px 10px;border:1px solid #999;">R\\C</th>`;
-        for (let c=0;c<cols;c++) {
-          tableHtml += `<th style="background:#f2f2f2;padding:6px 10px;border:1px solid #999;text-align:center;">C${c+1}</th>`;
-        }
-        tableHtml += `</tr>`;
-        // Data rows
-        for (let r=0;r<rows;r++) {
-          tableHtml += `<tr><td style="background:#f2f2f2;padding:6px 10px;border:1px solid #999;font-weight:bold;">R${r+1}</td>`;
-          for (let c=0;c<cols;c++) {
-            const cell = cells[r*cols+c];
-            const s = cell && cell.stats;
-            const val = s ? num4(s.mean) : '—';
-            tableHtml += `<td style="padding:6px 10px;border:1px solid #999;text-align:right;">${val}</td>`;
-          }
-          tableHtml += `</tr>`;
-        }
-        tableHtml += `</table>`;
-
-        // Plain text fallback (tab-separated, same layout)
-        let tsv = `R\\C${TAB}` + Array.from({length:cols},(_,c)=>`C${c+1}`).join(TAB) + NL;
-        for (let r=0;r<rows;r++) {
-          tsv += `R${r+1}${TAB}` + Array.from({length:cols},(_,c)=>{
-            const s = cells[r*cols+c]?.stats;
-            return s ? num4(s.mean) : '';
-          }).join(TAB) + NL;
-        }
-
-        // Write both HTML and plain text to clipboard
-        try {
-          const htmlBlob = new Blob([tableHtml], {type:'text/html'});
-          const textBlob = new Blob([tsv], {type:'text/plain'});
-          navigator.clipboard.write([
-            new ClipboardItem({'text/html': htmlBlob, 'text/plain': textBlob})
-          ]).then(() => {
-            const orig = btn.textContent;
-            btn.textContent = '✓ Skopiowano!';
-            btn.style.color = 'var(--accent3)';
-            btn.style.borderColor = 'var(--accent3)';
-            setTimeout(() => {
-              btn.textContent = orig;
-              btn.style.color = '';
-              btn.style.borderColor = '';
-            }, 1800);
-          });
-        } catch(e) {
-          // Fallback: plain text only
-          navigator.clipboard.writeText(tsv).then(() => {
-            btn.textContent = '✓ Skopiowano (tekst)';
-            setTimeout(() => { btn.textContent = '⎘ Kopiuj tabelę do Worda'; }, 1800);
-          });
-        }
-      };
     } else {
-      document.getElementById('grid-export-btns').style.display='none';
+      document.getElementById('btn-export-grid-csv').style.display = 'none';
     }
 
     document.getElementById('roi-panel').innerHTML = html;
