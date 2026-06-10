@@ -2414,5 +2414,27 @@
   </div>
 </div>
 
+<script>
+  // Notify the suite shell when a fullscreen measurement overlay is active,
+  // so the shell can hide its fullscreen-exit button for a perfectly clean
+  // measurement screen (nothing on top of the test pattern).
+  (function () {
+    const overlays = document.querySelectorAll('.fs-overlay');
+    function anyActive() {
+      for (const o of overlays) if (o.classList.contains('active')) return true;
+      return false;
+    }
+    function notify() {
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ source: 'dcs-calibrator', measuring: anyActive() }, '*');
+        }
+      } catch (e) {}
+    }
+    const obs = new MutationObserver(notify);
+    overlays.forEach(o => obs.observe(o, { attributes: true, attributeFilter: ['class'] }));
+  })();
+</script>
+
 </body>
 </html>
