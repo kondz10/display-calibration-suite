@@ -894,16 +894,6 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
       <div class="paste-hint" id="precHint">8 punktów: poziomy 0 · 36 · 73 · 109 · 146 · 182 · 219 · 255</div>
     </div>
 
-    <!-- RGB FROM WHITE OPTION -->
-    <div class="paste-section" style="margin-bottom:12px">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:var(--mono);font-size:13px;color:var(--text)">
-        <input type="checkbox" id="rgbFromW" onchange="toggleRGBFromW(this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer">
-        Przelicz składowe RGB z kanału W i dorysuj (tylko gdy brak danych RGB)
-      </label>
-      <div class="paste-hint">Rozkłada zmierzoną biel na prymarne sRGB. Wypełnia wyłącznie puste kanały — wprowadzone ręcznie pomiary R/G/B mają pierwszeństwo.</div>
-      <div class="import-status" id="rgbFromWNote" style="display:none;margin-top:8px;color:var(--accent)"></div>
-    </div>
-
     <!-- PASTE SECTION -->
     <div class="paste-section">
       <div class="paste-label">Wklej dane</div>
@@ -1213,57 +1203,6 @@ let currentCh = 'R';
 let currentMain = 'input';
 const charts = {};
 
-// ── Opcja: przeliczanie składowych RGB z kanału W ──
-let drawRGBFromW = false;
-const syntheticChannels = new Set();
-let syntheticData = {}; // dane przeliczone z W — trzymane osobno, nie trafiają do pól wejściowych
-const SRGB_PRIM = { R:{x:0.6400,y:0.3300}, G:{x:0.3000,y:0.6000}, B:{x:0.1500,y:0.0600} };
-const SRGB_LUM  = { R:0.2126, G:0.7152, B:0.0722 }; // wagi luminancji prymarnych D65
-
-function channelHasData(ch) {
-  return (data[ch] || []).some(p => p && (p.x !== '' || p.y !== '' || p.Y !== ''));
-}
-
-// Z kanału W liczy składowe R/G/B (rozkład na prymarne sRGB) dla PUSTYCH kanałów.
-// Dane trzymane w syntheticData — nie nadpisują pól wejściowych ani zapisu.
-function buildRGBFromWhite() {
-  syntheticData = {};
-  syntheticChannels.clear();
-  if (!drawRGBFromW) return;
-  if (!channelHasData('W')) return;
-  ['R','G','B'].forEach(ch => {
-    if (channelHasData(ch)) return; // nie nadpisuj wprowadzonych pomiarów
-    const prim = SRGB_PRIM[ch], w = SRGB_LUM[ch];
-    syntheticData[ch] = LEVELS.map((_, i) => {
-      const d = data['W'][i];
-      const x = parseFloat(d.x), y = parseFloat(d.y), Y = parseFloat(d.Y);
-      if (isNaN(x) || isNaN(y) || isNaN(Y)) return {x:'',y:'',Y:''};
-      return { x: prim.x.toFixed(4), y: prim.y.toFixed(4), Y: (Y * w).toFixed(4) };
-    });
-    syntheticChannels.add(ch);
-  });
-}
-
-function toggleRGBFromW(on) {
-  drawRGBFromW = on;
-  buildRGBFromWhite();
-  const note = document.getElementById('rgbFromWNote');
-  if (note) {
-    if (on && syntheticChannels.size > 0) {
-      note.textContent = `Składowe ${[...syntheticChannels].join(', ')} przeliczone z kanału W (rozkład na prymarne sRGB) — wartości szacunkowe.`;
-      note.style.display = 'block';
-    } else if (on && !channelHasData('W')) {
-      note.textContent = 'Brak danych kanału W — najpierw wprowadź pomiary bieli.';
-      note.style.display = 'block';
-    } else if (on) {
-      note.textContent = 'Kanały RGB mają już wprowadzone dane — składowe z W nie są rysowane.';
-      note.style.display = 'block';
-    } else {
-      note.style.display = 'none';
-    }
-  }
-  if (typeof renderCharts === 'function' && ['chroma','de'].includes(currentMain)) renderCharts();
-}
 
 const STORAGE_KEY = 'wba_data_v1';
 
@@ -1375,10 +1314,8 @@ function scaleWBDeltaE(de, levelPct) {
 // ─── Data helpers ────────────────────────────────────────────────────────────
 
 function parsePoint(ch, i) {
-  // Dane syntetyczne (przeliczone z W) mają pierwszeństwo dla pustych kanałów
-  const src = (syntheticChannels.has(ch) && syntheticData[ch]) ? syntheticData[ch][i] : data[ch][i];
-  if (!src) return null;
-  const x = parseFloat(src.x), y = parseFloat(src.y), Y = parseFloat(src.Y);
+  const d = data[ch][i];
+  const x = parseFloat(d.x), y = parseFloat(d.y), Y = parseFloat(d.Y);
   if (isNaN(x) || isNaN(y) || isNaN(Y)) return null;
   return { x, y, Y };
 }
@@ -1437,10 +1374,7 @@ function getChannelResults(ch) {
 }
 
 function activeChannels() {
-  return CHANNELS.filter(ch =>
-    data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== '') ||
-    (syntheticChannels.has(ch) && syntheticData[ch] && syntheticData[ch].some(p => p.x !== ''))
-  );
+  return CHANNELS.filter(ch => data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== ''));
 }
 
 // ─── UI helpers ──────────────────────────────────────────────────────────────
@@ -2393,7 +2327,6 @@ function renderGrayscale() {
 function calculate() {
   const has = CHANNELS.some(ch => data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== ''));
   if (!has) { alert('Wprowadź dane pomiarowe lub wczytaj demo.'); return; }
-  buildRGBFromWhite(); // przelicz składowe RGB z W jeśli opcja włączona i kanały puste
   switchMain('chroma');
 }
 
