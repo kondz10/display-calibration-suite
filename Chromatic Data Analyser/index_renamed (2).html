@@ -894,6 +894,16 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
       <div class="paste-hint" id="precHint">8 punktów: poziomy 0 · 36 · 73 · 109 · 146 · 182 · 219 · 255</div>
     </div>
 
+    <!-- RGB FROM WHITE OPTION -->
+    <div class="paste-section" style="margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-family:var(--mono);font-size:13px;color:var(--text)">
+        <input type="checkbox" id="rgbFromW" onchange="toggleRGBFromW(this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer">
+        Przelicz składowe RGB z kanału W i dorysuj (tylko gdy brak danych RGB)
+      </label>
+      <div class="paste-hint">Rozkłada zmierzoną biel na prymarne sRGB. Wypełnia wyłącznie puste kanały — wprowadzone ręcznie pomiary R/G/B mają pierwszeństwo.</div>
+      <div class="import-status" id="rgbFromWNote" style="display:none;margin-top:8px;color:var(--accent)"></div>
+    </div>
+
     <!-- PASTE SECTION -->
     <div class="paste-section">
       <div class="paste-label">Wklej dane</div>
@@ -1203,6 +1213,58 @@ let currentCh = 'R';
 let currentMain = 'input';
 const charts = {};
 
+// ── Opcja: przeliczanie składowych RGB z kanału W ──
+let drawRGBFromW = false;
+const syntheticChannels = new Set();
+let syntheticData = {}; // dane przeliczone z W — trzymane osobno, nie trafiają do pól wejściowych
+const SRGB_PRIM = { R:{x:0.6400,y:0.3300}, G:{x:0.3000,y:0.6000}, B:{x:0.1500,y:0.0600} };
+const SRGB_LUM  = { R:0.2126, G:0.7152, B:0.0722 }; // wagi luminancji prymarnych D65
+
+function channelHasData(ch) {
+  return (data[ch] || []).some(p => p && (p.x !== '' || p.y !== '' || p.Y !== ''));
+}
+
+// Z kanału W liczy składowe R/G/B (rozkład na prymarne sRGB) dla PUSTYCH kanałów.
+// Dane trzymane w syntheticData — nie nadpisują pól wejściowych ani zapisu.
+function buildRGBFromWhite() {
+  syntheticData = {};
+  syntheticChannels.clear();
+  if (!drawRGBFromW) return;
+  if (!channelHasData('W')) return;
+  ['R','G','B'].forEach(ch => {
+    if (channelHasData(ch)) return; // nie nadpisuj wprowadzonych pomiarów
+    const prim = SRGB_PRIM[ch], w = SRGB_LUM[ch];
+    syntheticData[ch] = LEVELS.map((_, i) => {
+      const d = data['W'][i];
+      const x = parseFloat(d.x), y = parseFloat(d.y), Y = parseFloat(d.Y);
+      if (isNaN(x) || isNaN(y) || isNaN(Y)) return {x:'',y:'',Y:''};
+      return { x: prim.x.toFixed(4), y: prim.y.toFixed(4), Y: (Y * w).toFixed(4) };
+    });
+    syntheticChannels.add(ch);
+  });
+}
+
+function toggleRGBFromW(on) {
+  drawRGBFromW = on;
+  buildRGBFromWhite();
+  const note = document.getElementById('rgbFromWNote');
+  if (note) {
+    if (on && syntheticChannels.size > 0) {
+      note.textContent = `Składowe ${[...syntheticChannels].join(', ')} przeliczone z kanału W (rozkład na prymarne sRGB) — wartości szacunkowe.`;
+      note.style.display = 'block';
+    } else if (on && !channelHasData('W')) {
+      note.textContent = 'Brak danych kanału W — najpierw wprowadź pomiary bieli.';
+      note.style.display = 'block';
+    } else if (on) {
+      note.textContent = 'Kanały RGB mają już wprowadzone dane — składowe z W nie są rysowane.';
+      note.style.display = 'block';
+    } else {
+      note.style.display = 'none';
+    }
+  }
+  if (typeof renderCharts === 'function' && ['chroma','de'].includes(currentMain)) renderCharts();
+}
+
 const STORAGE_KEY = 'wba_data_v1';
 
 function saveToStorage() {
@@ -1313,8 +1375,10 @@ function scaleWBDeltaE(de, levelPct) {
 // ─── Data helpers ────────────────────────────────────────────────────────────
 
 function parsePoint(ch, i) {
-  const d = data[ch][i];
-  const x = parseFloat(d.x), y = parseFloat(d.y), Y = parseFloat(d.Y);
+  // Dane syntetyczne (przeliczone z W) mają pierwszeństwo dla pustych kanałów
+  const src = (syntheticChannels.has(ch) && syntheticData[ch]) ? syntheticData[ch][i] : data[ch][i];
+  if (!src) return null;
+  const x = parseFloat(src.x), y = parseFloat(src.y), Y = parseFloat(src.Y);
   if (isNaN(x) || isNaN(y) || isNaN(Y)) return null;
   return { x, y, Y };
 }
@@ -1325,7 +1389,7 @@ function getChannelResults(ch) {
   const ref100 = pts[pts.length - 1];
   const Y100 = ref100 ? ref100.Y : null;
 
-  return pts.map(p => {
+  return pts.map((p, idx) => {
     if (!p) return null;
     const xyz = xyYtoXYZ(p.x, p.y, p.Y);
     const lab = XYZtoLab(xyz.X, xyz.Y, xyz.Z);
@@ -1361,6 +1425,10 @@ function getChannelResults(ch) {
       deITP = dEITP(refITP, normITP);
     }
 
+    // Poziom 0 (czerń) — chromatyczność jest nieokreślona/zaszumiona,
+    // więc ΔE jest tam pozbawione sensu. Pomijamy (null).
+    if (idx === 0) { de2 = null; deITP = null; }
+
     // Relative luminance vs channel's own 100% point
     const relY = Y100 ? (p.Y / Y100 * 100) : null;
 
@@ -1369,7 +1437,10 @@ function getChannelResults(ch) {
 }
 
 function activeChannels() {
-  return CHANNELS.filter(ch => data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== ''));
+  return CHANNELS.filter(ch =>
+    data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== '') ||
+    (syntheticChannels.has(ch) && syntheticData[ch] && syntheticData[ch].some(p => p.x !== ''))
+  );
 }
 
 // ─── UI helpers ──────────────────────────────────────────────────────────────
@@ -1677,12 +1748,15 @@ function renderCharts() {
     chromaCards.appendChild(c);
   });
 
-  // ── ΔE charts ──
+  // ── ΔE charts ── (pomijamy poziom 0 / czerń — chromatyczność czerni jest nieokreślona)
   buildLegend('deLegend', act, false);
+
+  const deIdx = LEVELS.map((_, i) => i).filter(i => i > 0);
+  const deLabels = deIdx.map(i => LEVELS[i]);
 
   const de2Datasets = act.map(ch => ({
     label: `ΔE2000 ${ch}`,
-    data: (results[ch] || []).map(r => r ? parseFloat(r.de2.toFixed(3)) : null),
+    data: deIdx.map(i => { const r = (results[ch] || [])[i]; return (r && r.de2 != null) ? parseFloat(r.de2.toFixed(3)) : null; }),
     backgroundColor: COLORS[ch] + 'bb',
     borderColor: COLORS[ch],
     borderWidth: 1,
@@ -1691,7 +1765,7 @@ function renderCharts() {
 
   const deITPDatasets = act.map(ch => ({
     label: `ΔEITP ${ch}`,
-    data: (results[ch] || []).map(r => r ? parseFloat(r.deITP.toFixed(3)) : null),
+    data: deIdx.map(i => { const r = (results[ch] || [])[i]; return (r && r.deITP != null) ? parseFloat(r.deITP.toFixed(3)) : null; }),
     backgroundColor: COLORS[ch] + 'bb',
     borderColor: COLORS[ch],
     borderWidth: 1,
@@ -1702,12 +1776,12 @@ function renderCharts() {
   destroyChart('deITP');
   charts['de2'] = new Chart(document.getElementById('de2Chart'), {
     type: 'bar',
-    data: { labels: LEVELS, datasets: de2Datasets },
+    data: { labels: deLabels, datasets: de2Datasets },
     options: makeChartOptions('ΔE2000', 0)
   });
   charts['deITP'] = new Chart(document.getElementById('deITPChart'), {
     type: 'bar',
-    data: { labels: LEVELS, datasets: deITPDatasets },
+    data: { labels: deLabels, datasets: deITPDatasets },
     options: makeChartOptions('ΔE ITP', 0)
   });
 
@@ -1728,7 +1802,7 @@ function renderCharts() {
         datasets: [{
           label: 'WB ΔE2000',
           data: wbRes.map((r, i) => {
-            if (!r) return null;
+            if (!r || r.de2 == null) return null;
 
             const lvl = LEVEL_PCT[i];
             return parseFloat(scaleWBDeltaE(r.de2, lvl).toFixed(3));
@@ -1749,7 +1823,7 @@ function renderCharts() {
         datasets: [{
           label: 'WB ΔE ITP',
           data: wbRes.map((r, i) => {
-            if (!r) return null;
+            if (!r || r.deITP == null) return null;
 
             const lvl = LEVEL_PCT[i];
             return parseFloat(scaleWBDeltaE(r.deITP, lvl).toFixed(3));
@@ -1766,7 +1840,7 @@ function renderCharts() {
     const wbCards = document.getElementById('wbCards');
     wbCards.innerHTML = '';
 
-    const valid = wbRes.filter(r => r);
+    const valid = wbRes.filter(r => r && r.de2 != null);
 
     if (valid.length) {
       const avg = valid.reduce((a, r) => a + r.de2, 0) / valid.length;
@@ -1802,7 +1876,7 @@ function renderCharts() {
   const deCards = document.getElementById('deCards');
   deCards.innerHTML = '';
   act.forEach(ch => {
-    const res = (results[ch] || []).filter(r => r);
+    const res = (results[ch] || []).filter(r => r && r.de2 != null);
     if (!res.length) return;
     const avgDe2 = (res.reduce((a, r) => a + r.de2, 0) / res.length).toFixed(2);
     const maxDe2 = Math.max(...res.map(r => r.de2)).toFixed(2);
@@ -1834,15 +1908,19 @@ function renderDePerChannel(act, results) {
     destroyChart('deITP_' + ch);
   });
 
+  // Indeksy bez poziomu 0 (czerni)
+  const pcIdx = LEVELS.map((_, i) => i).filter(i => i > 0);
+  const pcLabels = pcIdx.map(i => LEVELS[i]);
+
   act.forEach(ch => {
     const res = results[ch] || [];
-    const hasData = res.some(r => r);
+    const hasData = pcIdx.some(i => res[i]);
     if (!hasData) return;
 
     const color = COLORS[ch];
-    const de2vals  = res.map(r => r ? parseFloat(r.de2.toFixed(3)) : null);
-    const deITPvals = res.map(r => r ? parseFloat(r.deITP.toFixed(3)) : null);
-    const valid = res.filter(r => r);
+    const de2vals  = pcIdx.map(i => { const r = res[i]; return (r && r.de2 != null) ? parseFloat(r.de2.toFixed(3)) : null; });
+    const deITPvals = pcIdx.map(i => { const r = res[i]; return (r && r.deITP != null) ? parseFloat(r.deITP.toFixed(3)) : null; });
+    const valid = pcIdx.map(i => res[i]).filter(r => r && r.de2 != null);
     const avgDe2 = valid.length ? (valid.reduce((a,r) => a+r.de2, 0)/valid.length).toFixed(2) : '—';
     const maxDe2 = valid.length ? Math.max(...valid.map(r=>r.de2)).toFixed(2) : '—';
     const avgITP = valid.length ? (valid.reduce((a,r) => a+r.deITP, 0)/valid.length).toFixed(1) : '—';
@@ -1888,12 +1966,12 @@ function renderDePerChannel(act, results) {
 
     charts['de2_' + ch] = new Chart(document.getElementById('de2_' + ch), {
       type: 'bar',
-      data: { labels: LEVELS, datasets: [makeDataset('ΔE2000 ' + ch, de2vals)] },
+      data: { labels: pcLabels, datasets: [makeDataset('ΔE2000 ' + ch, de2vals)] },
       options: makeChartOptions('ΔE2000', 0)
     });
     charts['deITP_' + ch] = new Chart(document.getElementById('deITP_' + ch), {
       type: 'bar',
-      data: { labels: LEVELS, datasets: [makeDataset('ΔE ITP ' + ch, deITPvals)] },
+      data: { labels: pcLabels, datasets: [makeDataset('ΔE ITP ' + ch, deITPvals)] },
       options: makeChartOptions('ΔE ITP', 0)
     });
   });
@@ -2186,7 +2264,7 @@ function renderGrayscale() {
 
   // ── Chart 2: WB ΔE2000 bars ───────────────────────────────────────────────
 
-  const deData = validIndices.map(i => wRes[i] ? parseFloat(wRes[i].de2.toFixed(3)) : null);
+  const deData = validIndices.map(i => (wRes[i] && wRes[i].de2 != null) ? parseFloat(wRes[i].de2.toFixed(3)) : null);
 
   const deOptions = {
     responsive: true,
@@ -2254,7 +2332,7 @@ function renderGrayscale() {
   const avgDx = validResults.reduce((s, r) => s + r.dx, 0) / validResults.length;
   const avgDy = validResults.reduce((s, r) => s + r.dy, 0) / validResults.length;
   const maxDxy = Math.max(...validResults.map(r => Math.sqrt(r.dx*r.dx + r.dy*r.dy)));
-  const avgDe2 = validResults.reduce((s, r) => s + r.de2, 0) / validResults.length;
+  const avgDe2 = (() => { const v = validResults.filter(r => r.de2 != null); return v.length ? v.reduce((s, r) => s + r.de2, 0) / v.length : 0; })();
   const isStable = maxDxy < 0.005 && avgDe2 < 3;
 
   function makeCard(label, value, sub, extra) {
@@ -2315,6 +2393,7 @@ function renderGrayscale() {
 function calculate() {
   const has = CHANNELS.some(ch => data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== ''));
   if (!has) { alert('Wprowadź dane pomiarowe lub wczytaj demo.'); return; }
+  buildRGBFromWhite(); // przelicz składowe RGB z W jeśli opcja włączona i kanały puste
   switchMain('chroma');
 }
 
@@ -2533,7 +2612,7 @@ function downloadCSV() {
       lines.push([ch, lv, data[ch][i].x, data[ch][i].y, data[ch][i].Y,
         r ? r.dx.toFixed(5) : '', r ? r.dy.toFixed(5) : '',
         r && r.relY !== null ? r.relY.toFixed(2) : '',
-        r ? r.de2.toFixed(3) : '', r ? r.deITP.toFixed(3) : ''].join(','));
+        (r && r.de2 != null) ? r.de2.toFixed(3) : '', (r && r.deITP != null) ? r.deITP.toFixed(3) : ''].join(','));
     });
   });
   const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
