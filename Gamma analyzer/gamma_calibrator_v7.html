@@ -472,118 +472,223 @@ function redrawChart(){
 function exportGammaPNG() {
   if (!fitResult) { document.getElementById('gc-info').textContent = 'Najpierw kliknij „Oblicz krzywą", aby wygenerować wykres do eksportu.'; return; }
 
-  const pts   = getPoints();
-  const Lmax  = fitResult.Lmax;
-  const fgamma= fitResult.gamma;
+  const pts    = getPoints();
+  const Lmax   = fitResult.Lmax;
+  const fgamma = fitResult.gamma;
 
-  // Light-theme palette
+  // ── Identyczna paleta i font jak RGB Tracking ────────────────────────────────
   const C = {
-    bg:'#ffffff', panel:'#ffffff', border:'#d0d4de',
-    text:'#1a1d26', text2:'#4a4f60', muted:'#8b90a0',
-    accent:'#7a0fa8', red:'#c0392b', green:'#1e8c5a', grid:'rgba(0,0,0,0.08)',
-    mono:"'Share Tech Mono', monospace"
+    bg:        '#FFFFFF',
+    text:      '#1F2937',
+    textSub:   '#7A8594',
+    textAxis:  '#596273',
+    grid:      '#EAEAEA',
+    accent:    '#7A0FA8',
+    accentSub: 'rgba(122,15,168,0.55)',
+    ref:       '#8A95A3',
+    target:    '#C0392B',
+    cardBorder:'#ECECEC',
   };
+  const FONT = "Inter, 'SF Pro Display', 'IBM Plex Sans', sans-serif";
 
-  const SCALE = 3;
-  const W = 1040, PAD = 24;
-  const metricsH = 120, chartH = 520;
-  const H = PAD + metricsH + 16 + chartH + PAD;
-
+  const W = 1920, H = 1080, PAD = 64;
+  const SCALE = 2;
   const cv = document.createElement('canvas');
   cv.width = W * SCALE; cv.height = H * SCALE;
+  cv._logicalWidth = W; cv._logicalHeight = H;
   const ctx = cv.getContext('2d');
   ctx.scale(SCALE, SCALE);
 
-  // background
   ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
 
-  const known = KNOWN.reduce((a,b)=>Math.abs(b.gamma-fgamma)<Math.abs(a.gamma-fgamma)?b:a);
+  let cy = PAD;
+
+  // ── Header — identyczny układ jak RGB Tracking ───────────────────────────────
+  ctx.fillStyle = C.text;
+  ctx.font = `700 40px ${FONT}`;
+  ctx.letterSpacing = '0.02em';
+  ctx.textAlign = 'left';
+  ctx.fillText('GAMMA ANALYZER', PAD, cy + 40);
+  ctx.letterSpacing = '';
+  cy += 40 + 16;
+
+  // Dekoracyjne paski pod tytułem — akcent + szary
+  [[C.accent, 160], ['rgba(180,180,180,0.7)', 80]].forEach(([col, len], i) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(PAD + (i > 0 ? 172 : 0), cy, len, 3);
+  });
+  cy += 3 + 36;
+
+  // ── Identyfikacja gamma (pod tytułem) ────────────────────────────────────────
+  const known = KNOWN.reduce((a, b) => Math.abs(b.gamma - fgamma) < Math.abs(a.gamma - fgamma) ? b : a);
   const isMatch = Math.abs(known.gamma - fgamma) <= known.tol;
   const ident = isMatch ? known.name : 'Niestandardowa';
 
-  // ── metric cards (bez nagłówka) ──
-  let y = PAD;
-  const cards = [
-    { label:'GAMMA',         value: fgamma.toFixed(3),                 sub:'R² = ' + fitResult.r2.toFixed(4) },
-    { label:'LMAX',          value: Lmax.toFixed(1),                   sub:'cd/m²' },
-    { label:'IDENTYFIKACJA', value: ident,                             sub: isMatch ? known.desc : `γ = ${fgamma.toFixed(3)}` },
-  ];
-  if (targetActive && targetGamma) {
-    cards.push({ label:'CEL', value:'γ ' + targetGamma.toFixed(2), sub:'gamma docelowa' });
+  // ── Layout obszaru wykresu ───────────────────────────────────────────────────
+  const CARD_H = 110, CARD_GAP = 24;
+  const SUMMARY_LABEL_H = 32;
+  const CHART_TOP  = cy;
+  const CHART_BOT  = H - PAD - SUMMARY_LABEL_H - CARD_H - 48;
+  const CHART_H_PX = CHART_BOT - CHART_TOP;
+  const CHART_LEFT = PAD + 110;
+  const CHART_RIGHT = W - PAD - 200;
+  const CHART_W    = CHART_RIGHT - CHART_LEFT;
+
+  // ── Dane krzywej i pomiarów ──────────────────────────────────────────────────
+  const N = 256;
+  const curve = Array.from({ length: N }, (_, xi) => ({
+    x: xi,
+    y: Lmax * Math.pow(xi / 255, fgamma)
+  }));
+  const curveRef = Array.from({ length: N }, (_, xi) => ({
+    x: xi,
+    y: Lmax * Math.pow(xi / 255, 2.2)
+  }));
+  const curveTarget = (targetActive && targetGamma) ? Array.from({ length: N }, (_, xi) => ({
+    x: xi,
+    y: Lmax * Math.pow(xi / 255, targetGamma)
+  })) : null;
+
+  const xMin = 0, xMax = 255;
+  const yMin = 0;
+  const yMax = Lmax * 1.08;
+
+  const toX = v => CHART_LEFT + ((v - xMin) / (xMax - xMin)) * CHART_W;
+  const toY = v => CHART_BOT  - ((v - yMin) / (yMax - yMin)) * CHART_H_PX;
+
+  // ── Poziome linie siatki ─────────────────────────────────────────────────────
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+  const yStep = Lmax > 300 ? 100 : Lmax > 100 ? 50 : Lmax > 40 ? 20 : 10;
+  for (let yv = 0; yv <= yMax; yv += yStep) {
+    const gy = toY(yv);
+    ctx.beginPath(); ctx.moveTo(CHART_LEFT, gy); ctx.lineTo(CHART_RIGHT, gy); ctx.stroke();
+    ctx.fillStyle = C.textAxis; ctx.font = `600 25px ${FONT}`; ctx.textAlign = 'right';
+    ctx.fillText(yv.toFixed(0), CHART_LEFT - 14, gy + 9);
   }
-  const cols = cards.length;
-  const gap = 10;
-  const cw = Math.floor((W - PAD*2 - (cols-1)*gap) / cols);
-  const ch = metricsH - 8;
-  cards.forEach((c, i) => {
-    const cx = PAD + i*(cw+gap);
-    roundRectGA(ctx, cx, y, cw, ch, 8, C.bg, C.border);
-    const mid = cx + cw/2;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = C.muted; ctx.font = `600 16px ${C.mono}`;
-    ctx.fillText(c.label, mid, y + 30);
-    ctx.fillStyle = (c.label==='IDENTYFIKACJA' && isMatch) ? C.green : C.text;
-    const valFont = c.label==='IDENTYFIKACJA' ? 22 : 38;
-    ctx.font = `700 ${valFont}px ${C.mono}`;
-    ctx.fillText(c.value, mid, y + (c.label==='IDENTYFIKACJA' ? 70 : 76));
-    ctx.fillStyle = C.muted; ctx.font = `14px ${C.mono}`;
-    ctx.fillText(c.sub, mid, y + ch - 16);
-    ctx.textAlign = 'left';
+
+  // ── Pionowe linie siatki + etykiety osi X ───────────────────────────────────
+  const xTicks = [0, 32, 64, 96, 128, 160, 192, 224, 255];
+  xTicks.forEach(xv => {
+    const gx = toX(xv);
+    ctx.beginPath(); ctx.moveTo(gx, CHART_TOP); ctx.lineTo(gx, CHART_BOT); ctx.stroke();
+    ctx.fillStyle = C.textAxis; ctx.font = `600 25px ${FONT}`; ctx.textAlign = 'center';
+    ctx.fillText(String(xv), gx, CHART_BOT + 30);
   });
 
-  // ── chart (rendered offscreen on white theme, then blitted) ──
-  y += metricsH + 16;
-  roundRectGA(ctx, PAD, y, W - PAD*2, chartH, 8, C.bg, C.border);
+  // ── Tytuły osi ───────────────────────────────────────────────────────────────
+  ctx.fillStyle = C.textAxis; ctx.font = `600 28px ${FONT}`; ctx.textAlign = 'center';
+  ctx.fillText('Poziom sygnału (0–255)', CHART_LEFT + CHART_W / 2, CHART_BOT + 62);
+  ctx.save();
+  ctx.translate(PAD + 14, CHART_TOP + CHART_H_PX / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Luminancja (cd/m²)', 0, 0);
+  ctx.restore();
 
-  const innerPad = 16;
-  const chartX = PAD + innerPad, chartY = y + innerPad;
-  const chartW = W - PAD*2 - innerPad*2, chartHH = chartH - innerPad*2;
-
-  const off = document.createElement('canvas');
-  off.width = chartW * SCALE; off.height = chartHH * SCALE;
-
-  const datasets = [
-    { label:'Zmierzona γ='+fgamma.toFixed(2), data:gammaCurve(fgamma,Lmax), type:'line',
-      borderColor:C.accent, borderWidth:9, pointRadius:0, fill:false, tension:0, order:2 },
-    { label:'Ref γ=2.2', data:gammaCurve(2.2,Lmax), type:'line',
-      borderColor:'rgba(0,0,0,0.22)', borderWidth:5, borderDash:[10,7], pointRadius:0, fill:false, tension:0, order:4 },
-    { label:'Pomiary', data:pts.map(p=>({x:p.v,y:p.L})), type:'scatter',
-      backgroundColor:C.accent, borderColor:C.accent, pointRadius:14, order:1 },
-  ];
-  if (targetActive && targetGamma) {
-    datasets.push({ label:'Cel γ='+targetGamma.toFixed(2), data:gammaCurve(targetGamma,Lmax), type:'line',
-      borderColor:C.red, borderWidth:9, pointRadius:0, fill:false, tension:0, order:3 });
+  // ── Rysowanie krzywej referencyjnej (szara przerywana) ──────────────────────
+  function drawLine(pts2, strokeColor, lw, dash) {
+    if (pts2.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = strokeColor; ctx.lineWidth = lw;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    if (dash) ctx.setLineDash(dash); else ctx.setLineDash([]);
+    ctx.beginPath();
+    pts2.forEach((p, i) => {
+      const px = toX(p.x), py = toY(p.y);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+    ctx.restore();
   }
 
-  const exportChart = new Chart(off.getContext('2d'), {
-    type:'scatter',
-    data:{ datasets },
-    options:{
-      responsive:false, maintainAspectRatio:false, animation:false, devicePixelRatio:SCALE,
-      scales:{
-        x:{ type:'linear', min:0, max:255,
-            title:{display:true,text:'POZIOM SYGNAŁU  (0–255)',color:C.text2,font:{family:'Share Tech Mono',size:24}},
-            border:{display:true,color:'rgba(0,0,0,0.35)',width:2},
-            grid:{color:'rgba(0,0,0,0.10)'}, ticks:{color:C.text2,font:{family:'Share Tech Mono',size:22},maxTicksLimit:9} },
-        y:{ min:0,
-            title:{display:true,text:'LUMINANCJA  (cd/m²)',color:C.text2,font:{family:'Share Tech Mono',size:24}},
-            border:{display:true,color:'rgba(0,0,0,0.35)',width:2},
-            grid:{color:'rgba(0,0,0,0.10)'}, ticks:{color:C.text2,font:{family:'Share Tech Mono',size:22}} }
-      },
-      plugins:{
-        legend:{ display:true, labels:{color:C.text2,font:{family:'Share Tech Mono',size:20},boxWidth:26,padding:16,
-          filter:item=>item.label!=='Pomiary'||pts.length>0} },
-        tooltip:{ enabled:false }
-      }
+  drawLine(curveRef, 'rgba(0,0,0,0.18)', 5, [12, 8]);
+  if (curveTarget) drawLine(curveTarget, C.target, 7, [14, 6]);
+  drawLine(curve, C.accent, 9, null);
+
+  // ── Punkty pomiarowe ─────────────────────────────────────────────────────────
+  pts.forEach(p => {
+    const px = toX(p.v), py = toY(p.L);
+    ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF'; ctx.fill();
+    ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2);
+    ctx.fillStyle = C.accent; ctx.fill();
+  });
+
+  // ── Legenda po prawej ─────────────────────────────────────────────────────────
+  const legendItems = [
+    { label: 'Zmierzona', value: `γ = ${fgamma.toFixed(3)}`, color: C.accent },
+    { label: 'Ref γ 2.2', value: '', color: 'rgba(0,0,0,0.35)' },
+  ];
+  if (curveTarget) legendItems.push({ label: 'Cel', value: `γ = ${targetGamma.toFixed(2)}`, color: C.target });
+
+  const lx = CHART_RIGHT + 24;
+  legendItems.forEach((li, i) => {
+    const ly = CHART_TOP + 44 + i * 70;
+    ctx.beginPath(); ctx.arc(lx + 8, ly - 9, 6, 0, Math.PI * 2);
+    ctx.fillStyle = li.color; ctx.fill();
+    ctx.fillStyle = li.color;
+    ctx.font = `700 24px ${FONT}`; ctx.textAlign = 'left';
+    ctx.fillText(li.label, lx + 22, ly);
+    if (li.value) {
+      ctx.font = `600 20px ${FONT}`; ctx.fillStyle = C.textSub || C.textAxis;
+      ctx.fillText(li.value, lx + 22, ly + 26);
     }
   });
 
-  ctx.fillStyle = C.bg;
-  ctx.fillRect(chartX, chartY, chartW, chartHH);
-  ctx.drawImage(off, 0, 0, off.width, off.height, chartX, chartY, chartW, chartHH);
-  exportChart.destroy();
+  cy = CHART_BOT + 72;
 
-  // ── download ──
+  // ── Etykieta „PODSUMOWANIE" ───────────────────────────────────────────────────
+  ctx.fillStyle = C.textSub || C.textAxis;
+  ctx.font = `600 13px ${FONT}`; ctx.letterSpacing = '0.08em'; ctx.textAlign = 'left';
+  ctx.fillText('PODSUMOWANIE', PAD, cy + 14); ctx.letterSpacing = '';
+  const lblW2 = ctx.measureText('PODSUMOWANIE').width + 16;
+  ctx.strokeStyle = '#EAEAEA'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD + lblW2, cy + 10); ctx.lineTo(W - PAD, cy + 10); ctx.stroke();
+  cy += SUMMARY_LABEL_H;
+
+  // ── KPI cards ─────────────────────────────────────────────────────────────────
+  const kpiCards = [
+    { label: 'GAMMA',         value: fgamma.toFixed(3),            sub: 'obliczona krzywa potęgowa',   color: C.accent },
+    { label: 'LMAX',          value: Lmax.toFixed(1) + ' cd/m²',   sub: 'luminancja maksymalna',       color: C.text },
+    { label: 'IDENTYFIKACJA', value: ident,                         sub: isMatch ? known.desc : `γ = ${fgamma.toFixed(3)}`, color: isMatch ? '#4FA86F' : C.text },
+    { label: 'R²',            value: fitResult.r2.toFixed(4),       sub: 'dopasowanie krzywej',         color: fitResult.r2 > 0.999 ? '#4FA86F' : C.accent },
+  ];
+  const nCols = kpiCards.length;
+  const availW2 = W - PAD * 2;
+  const cw2 = Math.floor((availW2 - (nCols - 1) * CARD_GAP) / nCols);
+
+  kpiCards.forEach((kd, i) => {
+    const cx2 = PAD + i * (cw2 + CARD_GAP);
+    const cy2 = cy;
+
+    roundRectGA(ctx, cx2 + 2, cy2 + 3, cw2, CARD_H, 12, 'rgba(0,0,0,0.018)', null);
+    roundRectGA(ctx, cx2, cy2, cw2, CARD_H, 12, '#FFFFFF', C.cardBorder);
+
+    // Left accent bar
+    ctx.fillStyle = kd.color;
+    ctx.beginPath();
+    ctx.moveTo(cx2 + 4, cy2); ctx.lineTo(cx2 + 8, cy2);
+    ctx.lineTo(cx2 + 8, cy2 + CARD_H); ctx.lineTo(cx2 + 4, cy2 + CARD_H);
+    ctx.quadraticCurveTo(cx2, cy2 + CARD_H, cx2, cy2 + CARD_H - 12);
+    ctx.lineTo(cx2, cy2 + 12);
+    ctx.quadraticCurveTo(cx2, cy2, cx2 + 4, cy2);
+    ctx.closePath(); ctx.fill();
+
+    const TX = cx2 + 22;
+    ctx.fillStyle = kd.color;
+    ctx.font = `700 14px ${FONT}`; ctx.letterSpacing = '0.08em'; ctx.textAlign = 'left';
+    ctx.fillText(kd.label, TX, cy2 + 28); ctx.letterSpacing = '';
+
+    ctx.fillStyle = C.text;
+    const vFontSize = kd.label === 'IDENTYFIKACJA' ? 24 : 36;
+    ctx.font = `700 ${vFontSize}px ${FONT}`;
+    ctx.fillText(kd.value, TX, cy2 + (kd.label === 'IDENTYFIKACJA' ? 70 : 76));
+
+    ctx.fillStyle = '#8A93A0';
+    ctx.font = `400 11px ${FONT}`;
+    ctx.fillText(kd.sub, TX, cy2 + CARD_H - 14);
+  });
+
+  // ── Download ─────────────────────────────────────────────────────────────────
   const a = document.createElement('a');
   a.href = cv.toDataURL('image/png');
   a.download = `gamma_${fgamma.toFixed(2)}.png`;
