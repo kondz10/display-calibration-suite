@@ -2034,19 +2034,6 @@ class ROIManager {
       // center crosshair
       ctx.strokeStyle = '#8b15ba'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(cx-10,cy); ctx.lineTo(cx+10,cy); ctx.moveTo(cx,cy-10); ctx.lineTo(cx,cy+10); ctx.stroke();
-      // labels: inner at center, ring mean at midpoint of radii
-      if (this._ring) {
-        const ringMidR = (rInner + rOuter) / 2;
-        const drawLabel = (lx, ly, stats, color) => {
-          if (!stats) return;
-          const txt = stats.mean.toFixed(2), unit = 'cd/m²';
-          ctx.font = `bold 15px "Share Tech Mono"`;
-          const tw = ctx.measureText(txt).width;
-          const bw = Math.max(tw, ctx.measureText(unit).width*0.72) + 12, bh = 24;
-          const bx = lx - bw/2, by = ly - bh/2;
-          ctx.fillStyle = 'rgba(0,0,0,0.65)';
-          if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,3); ctx.fill(); }
-          else ctx.fillRect(bx,by,bw,bh);
       // labels: inner (centre) and ring annulus
       if (this._ring) {
         const ringMidR = (rInner + rOuter) / 2;
