@@ -779,11 +779,11 @@ select:hover { border-color: var(--accent); }
             </div>
             <span class="grid-label" style="width:auto;color:var(--text3)">Rows</span>
           </div>
-          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;">max 8 cols · 4 rows &nbsp;|&nbsp; 1×1 = bez siatki</div>
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;">cols × rows &nbsp;|&nbsp; 1×1 = bez siatki</div>
         </div>
         <!-- hidden inputs still used by JS logic -->
-        <input class="grid-spinner" id="grid-cols" type="number" min="1" max="8" value="2">
-        <input class="grid-spinner" id="grid-rows" type="number" min="1" max="4" value="2">
+        <input class="grid-spinner" id="grid-cols" type="number" min="1" max="64" value="2">
+        <input class="grid-spinner" id="grid-rows" type="number" min="1" max="64" value="2">
       </div>
       <div id="ring-config" style="display:none;margin-top:4px;margin-bottom:10px;">
         <div style="font-size:11px;color:var(--text3);letter-spacing:1px;line-height:1.7;margin-bottom:8px;">
@@ -1936,26 +1936,31 @@ class ROIManager {
               const cellCx = cx + cw/2;
               const cellCy = cy + ch/2;
 
-              // Adaptive font size based on cell size
-              const fontSize = Math.max(14, Math.min(28, cw / 3.6, ch / 1.9));
-              const unitSize = Math.max(10, fontSize * 0.65);
+              // Adaptive font size — purely proportional to cell, no minimum clamp
+              const fontSize = Math.min(cw / 3.6, ch / 1.9, 28);
+              const unitSize = fontSize * 0.65;
 
-              // Main value
-              ctx.font = `bold ${fontSize}px "Share Tech Mono"`;
-              const tw = ctx.measureText(txt).width;
-              const uw = ctx.measureText(unit).width * (unitSize/fontSize);
-              const totalW = Math.max(tw, uw);
-              const padX = 6, padY = 4;
-              const boxH = fontSize + unitSize + padY * 2 + 3;
-              const boxW = totalW + padX * 2;
+              if (fontSize < 5) {
+                // Cell too tiny — just draw a dot
+                ctx.fillStyle = '#8b15ba';
+                ctx.beginPath(); ctx.arc(cellCx, cellCy, 2, 0, Math.PI*2); ctx.fill();
+              } else {
+                // Measure text with correct fonts
+                ctx.font = `bold ${fontSize}px "Share Tech Mono"`;
+                const tw = ctx.measureText(txt).width;
+                ctx.font = `${unitSize}px "Share Tech Mono"`;
+                const uw = ctx.measureText(unit).width;
+                const totalW = Math.max(tw, uw);
+                const padX = Math.max(3, fontSize * 0.25);
+                const padY = Math.max(2, fontSize * 0.18);
+                const boxH = fontSize + unitSize + padY * 2 + 2;
+                const boxW = totalW + padX * 2;
 
-              // Only draw if cell is big enough
-              if (cw > boxW + 4 && ch > boxH + 4) {
                 // Background pill
                 ctx.fillStyle = 'rgba(0,0,0,0.62)';
                 const bx = cellCx - boxW/2, by = cellCy - boxH/2;
                 if (ctx.roundRect) {
-                  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 4); ctx.fill();
+                  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, Math.min(4, fontSize * 0.3)); ctx.fill();
                 } else {
                   ctx.fillRect(bx, by, boxW, boxH);
                 }
@@ -1964,20 +1969,15 @@ class ROIManager {
                 ctx.fillStyle = '#8b15ba';
                 ctx.font = `bold ${fontSize}px "Share Tech Mono"`;
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(txt, cellCx, cellCy - unitSize/2 - 1);
+                ctx.textBaseline = 'alphabetic';
+                ctx.fillText(txt, cellCx, by + padY + fontSize);
 
                 // Unit
-                ctx.fillStyle = 'rgba(139,21,186,0.60)';
+                ctx.fillStyle = 'rgba(139,21,186,0.70)';
                 ctx.font = `${unitSize}px "Share Tech Mono"`;
-                ctx.fillText(unit, cellCx, cellCy + fontSize/2 + 1);
-              } else if (cw > 20 && ch > 10) {
-                // Tiny fallback — just the number, no background
-                ctx.font = `${Math.max(10, fontSize * 0.8)}px "Share Tech Mono"`;
-                ctx.fillStyle = '#8b15ba';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(txt, cellCx, cellCy);
+                ctx.fillText(unit, cellCx, by + padY + fontSize + 2 + unitSize);
+
+                ctx.textBaseline = 'alphabetic';
               }
             }
           }
@@ -2534,8 +2534,8 @@ class App {
     const rowsVal = document.getElementById('grid-rows-val');
 
     const onGridChange = () => {
-      this.roi.gridCols = Math.max(1,Math.min(8,parseInt(gridColsEl.value)||1));
-      this.roi.gridRows = Math.max(1,Math.min(4,parseInt(gridRowsEl.value)||1));
+      this.roi.gridCols = Math.max(1, parseInt(gridColsEl.value)||1);
+      this.roi.gridRows = Math.max(1, parseInt(gridRowsEl.value)||1);
       gridColsEl.value = this.roi.gridCols;
       gridRowsEl.value = this.roi.gridRows;
       colsVal.textContent = this.roi.gridCols;
@@ -2551,13 +2551,13 @@ class App {
       gridColsEl.value = Math.max(1, parseInt(gridColsEl.value||2) - 1); onGridChange();
     });
     document.getElementById('grid-cols-inc').addEventListener('click', () => {
-      gridColsEl.value = Math.min(8, parseInt(gridColsEl.value||2) + 1); onGridChange();
+      gridColsEl.value = Math.max(1, parseInt(gridColsEl.value||2) + 1); onGridChange();
     });
     document.getElementById('grid-rows-dec').addEventListener('click', () => {
       gridRowsEl.value = Math.max(1, parseInt(gridRowsEl.value||2) - 1); onGridChange();
     });
     document.getElementById('grid-rows-inc').addEventListener('click', () => {
-      gridRowsEl.value = Math.min(4, parseInt(gridRowsEl.value||2) + 1); onGridChange();
+      gridRowsEl.value = Math.max(1, parseInt(gridRowsEl.value||2) + 1); onGridChange();
     });
 
     document.getElementById('btn-export-png').addEventListener('click', () => {
