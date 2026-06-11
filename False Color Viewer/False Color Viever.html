@@ -680,9 +680,9 @@ select:hover { border-color: var(--accent); }
     <!-- File -->
     <div class="section">
       <div class="section-title">File</div>
-      <label class="file-btn">
+      <label class="file-btn" onclick="document.getElementById('file-input').click()">
         <span>⊕ Load .h5 File</span>
-        <input type="file" id="file-input" accept=".h5">
+        <input type="file" id="file-input" accept=".h5" style="display:none">
       </label>
     </div>
 
@@ -2463,6 +2463,8 @@ class App {
     });
 
     const dz = document.getElementById('drop-zone');
+    dz.style.cursor = 'pointer';
+    dz.addEventListener('click', () => document.getElementById('file-input').click());
     dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
     dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
     dz.addEventListener('drop', e => {
