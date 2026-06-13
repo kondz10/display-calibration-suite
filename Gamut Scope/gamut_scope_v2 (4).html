@@ -289,6 +289,13 @@ canvas {
 .cbar { flex: 1; height: 4px; background: var(--s3); border-radius: 2px; overflow: hidden; }
 .cfill { height: 100%; border-radius: 2px; transition: width .5s ease; }
 .cpct { font-size: 16px; color: var(--grn); min-width: 42px; text-align: right; font-weight: bold; }
+.cov-check { width: 15px; height: 15px; accent-color: var(--acc); cursor: pointer; flex-shrink: 0; }
+.cov-ratio {
+  font-size: 11px; color: var(--acc); font-weight: bold;
+  letter-spacing: .5px; white-space: nowrap;
+  padding: 2px 6px; border: 1px solid var(--acc); border-radius: 5px;
+  background: rgba(139,21,186,0.12);
+}
 
 .empty-state {
   text-align: center; padding: 24px 12px;
@@ -442,6 +449,7 @@ canvas {
           <div class="hint">▲ Results appear here</div>
         </div>
       </div>
+      <button class="btn" id="btnExportPng" onclick="exportGamutPNG()" style="margin-top:10px;width:100%;"><span>⬇ Eksport PNG (zaznaczone pokrycia)</span></button>
     </div>
 
     <!-- Standard gamuts toggle -->
@@ -527,6 +535,7 @@ const vis = {'sRGB':true,'Rec.709':true,'Rec.2020':true,'Adobe RGB':true,'DCI-P3
 let activeWP = 'D65';
 let customOn = false;
 let customPts = [];
+let exportSel = {};  // {gamutName: bool} — which coverage rows appear in PNG export
 
 /* ── XYZ ↔ RGB ── */
 function xyz2rgb(X,Y,Z){
@@ -678,6 +687,13 @@ function drawGamut(name){
     ctx.beginPath(); ctx.arc(px,py,4,0,Math.PI*2);
     ctx.fillStyle=g.color; ctx.fill();
   });
+  // name label at green (top) vertex
+  const [gx,gy]=pts[1];
+  ctx.font='bold 13px Share Tech Mono'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.lineWidth=3; ctx.strokeStyle='rgba(5,5,10,0.85)';
+  ctx.strokeText(name, gx+8, gy-6);
+  ctx.fillStyle=g.color;
+  ctx.fillText(name, gx+8, gy-6);
 }
 
 function drawCustom(){
@@ -695,6 +711,122 @@ function drawCustom(){
     ctx.fillStyle='#000'; ctx.font='bold 10px Share Tech Mono'; ctx.textAlign='center';
     ctx.fillText(labels[i],px,py+4); ctx.textAlign='left';
   });
+}
+
+/* ── PNG EXPORT (sama grafika diagramu z wypełnieniem kolorem, bez podpisów) ── */
+function exportGamutPNG(){
+  if(!customOn || customPts.length!==3){
+    alert('Najpierw narysuj swój gamut (Draw), aby wyeksportować.');
+    return;
+  }
+  const SCALE = 3;                         // very high resolution
+  // Square export — diagram fills the entire PNG
+  const DW = 1180, DH = 1180;
+  const cv = document.createElement('canvas');
+  cv.width = DW * SCALE; cv.height = DH * SCALE;
+  const x = cv.getContext('2d');
+  x.scale(SCALE, SCALE);
+
+  // transparent/white base
+  x.fillStyle = '#ffffff'; x.fillRect(0,0,DW,DH);
+
+  const EPAD = 70;
+  const EW = DW, EH = DH;
+  const ec2p = (cx,cy)=>[ EPAD+(cx-CX0)/(CX1-CX0)*(EW-2*EPAD), EH-EPAD-(cy-CY0)/(CY1-CY0)*(EH-2*EPAD) ];
+  const ep2c = (px,py)=>[ (px-EPAD)/(EW-2*EPAD)*(CX1-CX0)+CX0, (EH-EPAD-py)/(EH-2*EPAD)*(CY1-CY0)+CY0 ];
+
+  // ── Color fill over the spectral locus area (high-res) ──
+  const fillCanvas = document.createElement('canvas');
+  fillCanvas.width = EW; fillCanvas.height = EH;
+  const fctx = fillCanvas.getContext('2d');
+  const idata = fctx.createImageData(EW, EH);
+  const dd = idata.data;
+  for(let py=0;py<EH;py++) for(let px=0;px<EW;px++){
+    const [cx2,cy2]=ep2c(px,py);
+    if(cx2<0||cy2<0||cx2>CX1||cy2>CY1) continue;
+    if(!ptInLocus(cx2,cy2)) continue;
+    const [X,Y,Z]=xyY2XYZ(cx2,cy2,1);
+    let [r,g,b]=xyz2rgb(X,Y,Z);
+    const mx=Math.max(r,g,b); if(mx>1){r/=mx;g/=mx;b/=mx;}
+    const i=(py*EW+px)*4;
+    dd[i]=r*255|0; dd[i+1]=g*255|0; dd[i+2]=b*255|0; dd[i+3]=255;
+  }
+  fctx.putImageData(idata,0,0);
+  x.drawImage(fillCanvas,0,0);
+
+  // grid (subtle, over the color)
+  x.font='20px Share Tech Mono, monospace';
+  x.strokeStyle='rgba(0,0,0,.13)'; x.lineWidth=1;
+  x.fillStyle='rgba(0,0,0,.55)';
+  for(let v=0;v<=0.8;v+=0.1){
+    const [px]=ec2p(v,0);
+    x.beginPath(); x.moveTo(px,EH-EPAD); x.lineTo(px,EPAD); x.stroke();
+    x.fillText(v.toFixed(1),px-14,EH-EPAD+30);
+  }
+  for(let v=0;v<=0.8;v+=0.1){
+    const [,py]=ec2p(0,v);
+    x.beginPath(); x.moveTo(EPAD,py); x.lineTo(EW-EPAD,py); x.stroke();
+    if(v>0) x.fillText(v.toFixed(1),16,py+7);
+  }
+  x.fillStyle='rgba(0,0,0,.6)'; x.font='bold 24px Share Tech Mono';
+  x.fillText('x', EW/2, EH-18);
+  x.save(); x.translate(28,EH/2); x.rotate(-Math.PI/2); x.fillText('y',0,0); x.restore();
+
+  // spectral locus border (smoothed)
+  const lpts=LOCUS.map(p=>ec2p(p.x,p.y));
+  const dense=densifyCatmullRom(lpts,12);
+  x.beginPath(); x.moveTo(dense[0][0],dense[0][1]);
+  for(let i=1;i<dense.length;i++) x.lineTo(dense[i][0],dense[i][1]);
+  x.closePath();
+  x.strokeStyle='rgba(0,0,0,.55)'; x.lineWidth=2.4; x.lineJoin='round'; x.stroke();
+
+  // visible reference gamuts
+  Object.keys(GAMUTS).forEach(n=>{
+    if(!vis[n]) return;
+    const g=GAMUTS[n];
+    const pts=g.pts.map(p=>ec2p(p.x,p.y));
+    x.beginPath(); x.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++) x.lineTo(pts[i][0],pts[i][1]);
+    x.closePath();
+    x.strokeStyle=g.color; x.lineWidth=3; x.stroke();
+    pts.forEach(([px,py])=>{ x.beginPath(); x.arc(px,py,6,0,Math.PI*2); x.fillStyle=g.color; x.fill(); });
+    // name label near the green (top) vertex — small, colour-matched
+    const [gx,gy]=pts[1];
+    x.font='bold 17px Share Tech Mono'; x.textAlign='left'; x.textBaseline='alphabetic';
+    const lw=x.measureText(n).width;
+    // subtle white halo so the label stays readable over the colour fill
+    x.lineWidth=3; x.strokeStyle='rgba(255,255,255,0.85)';
+    x.strokeText(n, gx+10, gy-8);
+    x.fillStyle=g.color;
+    x.fillText(n, gx+10, gy-8);
+  });
+
+  // custom gamut (measured) — bold black dashed + RGB vertices
+  const cpts=customPts.map(p=>ec2p(p.x,p.y));
+  x.beginPath(); x.moveTo(cpts[0][0],cpts[0][1]);
+  for(let i=1;i<cpts.length;i++) x.lineTo(cpts[i][0],cpts[i][1]);
+  x.closePath();
+  x.strokeStyle='#111'; x.lineWidth=3.5; x.setLineDash([12,5]); x.stroke(); x.setLineDash([]);
+  const vlab=['R','G','B'], vcol=['#e23b3b','#28a05a','#2f6fe0'];
+  customPts.forEach((p,i)=>{
+    const [px,py]=ec2p(p.x,p.y);
+    x.beginPath(); x.arc(px,py,9,0,Math.PI*2); x.fillStyle=vcol[i]; x.fill();
+    x.fillStyle='#fff'; x.font='bold 15px Share Tech Mono'; x.textAlign='center'; x.textBaseline='middle';
+    x.fillText(vlab[i],px,py); x.textAlign='left'; x.textBaseline='alphabetic';
+  });
+
+  // white point marker
+  const wpx=parseFloat(document.getElementById('wpx').value);
+  const wpy=parseFloat(document.getElementById('wpy').value);
+  const [wpxp,wpyp]=ec2p(wpx,wpy);
+  x.beginPath(); x.arc(wpxp,wpyp,11,0,Math.PI*2); x.strokeStyle='#111'; x.lineWidth=2; x.stroke();
+  x.beginPath(); x.arc(wpxp,wpyp,4,0,Math.PI*2); x.fillStyle='#111'; x.fill();
+
+  // ── download ──
+  const a=document.createElement('a');
+  a.href=cv.toDataURL('image/png');
+  a.download='gamut_coverage.png';
+  a.click();
 }
 
 /* ── GEOMETRY ── */
@@ -762,15 +894,28 @@ function updateCovList(){
     return;
   }
   visibleGamuts.forEach(([n,g])=>{
-    const v=cov(customPts,g.pts).toFixed(1);
-    const pct=Math.min(parseFloat(v),100);
+    const v=cov(customPts,g.pts);                       // overlap coverage (≤100)
+    const ratio = area(customPts)/area(g.pts)*100;       // area ratio (can exceed 100)
+    const vTxt = v.toFixed(1);
+    const barPct=Math.min(v,100);
+    const sel = exportSel[n] !== false; // default selected
     const d=document.createElement('div');
     d.className='cov-row';
-    d.innerHTML=`<div class="gdot" style="background:${g.color}"></div>
+    // ratio badge shown when gamut is larger than reference (e.g. 130% sRGB)
+    const ratioBadge = ratio > 100.5
+      ? `<div class="cov-ratio" title="Powierzchnia gamutu względem ${n}">${ratio.toFixed(0)}%&nbsp;area</div>`
+      : '';
+    d.innerHTML=`<input type="checkbox" class="cov-check" ${sel?'checked':''} data-g="${n}" title="Pokaż w eksporcie PNG">
+      <div class="gdot" style="background:${g.color}"></div>
       <div class="gname">${n}</div>
-      <div class="cbar"><div class="cfill" style="width:${pct}%;background:${g.color}"></div></div>
-      <div class="cpct">${v}%</div>`;
+      <div class="cbar"><div class="cfill" style="width:${barPct}%;background:${g.color}"></div></div>
+      ${ratioBadge}
+      <div class="cpct">${vTxt}%</div>`;
     cl.appendChild(d);
+  });
+  // Wire checkboxes
+  cl.querySelectorAll('.cov-check').forEach(cb=>{
+    cb.onchange=()=>{ exportSel[cb.dataset.g] = cb.checked; };
   });
 }
 
