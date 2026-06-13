@@ -956,13 +956,14 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
     </div>
     <div class="section-grid" id="deCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:20px"></div>
 
-    <!-- Per-channel breakdown -->
-    <div class="section-label">Błędy ΔE per kanał</div>
+    <!-- Tabela wyników ΔE -->
+    <div class="section-label">Tabela wyników ΔE</div>
     <div class="info-box" style="margin-bottom:16px">
-      Wykresy poniżej pokazują ΔE2000 i ΔE ITP osobno dla każdego kanału (<strong>R, G, B, W</strong>) względem
-      idealnego targetu sRGB, przy luminancji Y równej zmierzonej — błąd czysto barwny bez wpływu luminancji.
+      Min / średnia / maks ΔE2000 (SDR) i ΔE ITP (HDR) względem idealnego targetu sRGB dla każdego kanału,
+      przy luminancji Y równej zmierzonej — błąd czysto barwny. Średnie respektują opcję pominięcia poziomu 36.
     </div>
-    <div id="dePerChannelWrap"></div>
+    <div id="deResultsTable"></div>
+    <div id="dePerChannelWrap" style="display:none"></div>
   </div>
 
 
@@ -1389,6 +1390,16 @@ function skipFirstLevel() {
   return document.getElementById('skipLevel36')?.checked === true;
 }
 
+// Ocena jakości wg skali ΔE
+function deAssessment(de) {
+  if (de == null || isNaN(de)) return { label:'brak danych', icon:'—', color:'#888', bg:'rgba(136,136,136,.08)', border:'rgba(136,136,136,.25)' };
+  if (de < 1)  return { label:'różnica niewidoczna (referencyjna jakość)',           icon:'★', color:'#1f9d57', bg:'rgba(31,157,87,.10)',  border:'rgba(31,157,87,.35)' };
+  if (de < 2)  return { label:'praktycznie niewidoczna dla większości ludzi',        icon:'✓', color:'#3a9d4a', bg:'rgba(58,157,74,.10)',  border:'rgba(58,157,74,.35)' };
+  if (de < 3)  return { label:'lekko zauważalna (akceptowalna standardowo)',         icon:'◐', color:'#b8902a', bg:'rgba(184,144,42,.10)', border:'rgba(184,144,42,.35)' };
+  if (de <= 5) return { label:'wyraźnie widoczna różnica',                            icon:'⚠', color:'#cc6b2c', bg:'rgba(204,107,44,.10)', border:'rgba(204,107,44,.35)' };
+  return         { label:'duży błąd koloru',                                          icon:'✕', color:'#c0392b', bg:'rgba(192,57,43,.10)',  border:'rgba(192,57,43,.35)' };
+}
+
 // ─── UI helpers ──────────────────────────────────────────────────────────────
 
 function switchMain(v) {
@@ -1723,124 +1734,136 @@ function renderCharts() {
   charts['de2'] = new Chart(document.getElementById('de2Chart'), {
     type: 'bar',
     data: { labels: deLabels, datasets: de2Datasets },
-    options: makeChartOptions('ΔE2000', 0)
+    options: makeChartOptions('ΔE2000 (SDR)', 0)
   });
   charts['deITP'] = new Chart(document.getElementById('deITPChart'), {
     type: 'bar',
     data: { labels: deLabels, datasets: deITPDatasets },
-    options: makeChartOptions('ΔE ITP', 0)
+    options: makeChartOptions('ΔE ITP (HDR)', 0)
   });
-
-
-  // ── WB ΔE charts (review style) ──
-  const wbChannel = act.includes('W') ? 'W' : act[0];
-
-  if (wbChannel && results[wbChannel]) {
-    const wbRes = results[wbChannel];
-
-    destroyChart('wbde');
-    destroyChart('wbitp');
-
-    charts['wbde'] = new Chart(document.getElementById('wbDeChart'), {
-      type: 'bar',
-      data: {
-        labels: LEVELS,
-        datasets: [{
-          label: 'WB ΔE2000',
-          data: wbRes.map((r, i) => {
-            if (!r || r.de2 == null) return null;
-
-            const lvl = LEVEL_PCT[i];
-            return parseFloat(scaleWBDeltaE(r.de2, lvl).toFixed(3));
-          }),
-          backgroundColor: COLORS[wbChannel] + 'cc',
-          borderColor: COLORS[wbChannel],
-          borderWidth: 1,
-          borderRadius: 3
-        }]
-      },
-      options: makeChartOptions('ΔE2000', 0)
-    });
-
-    charts['wbitp'] = new Chart(document.getElementById('wbItpChart'), {
-      type: 'bar',
-      data: {
-        labels: LEVELS,
-        datasets: [{
-          label: 'WB ΔE ITP',
-          data: wbRes.map((r, i) => {
-            if (!r || r.deITP == null) return null;
-
-            const lvl = LEVEL_PCT[i];
-            return parseFloat(scaleWBDeltaE(r.deITP, lvl).toFixed(3));
-          }),
-          backgroundColor: COLORS[wbChannel] + 'cc',
-          borderColor: COLORS[wbChannel],
-          borderWidth: 1,
-          borderRadius: 3
-        }]
-      },
-      options: makeChartOptions('ΔE ITP', 0)
-    });
-
-    const wbCards = document.getElementById('wbCards');
-    wbCards.innerHTML = '';
-
-    const valid = wbRes.filter((r, idx) => r && r.de2 != null && !(skipFirstLevel() && idx === 1));
-
-    if (valid.length) {
-      const avg = valid.reduce((a, r) => a + r.de2, 0) / valid.length;
-      const maxv = Math.max(...valid.map(r => r.de2));
-
-      const card = document.createElement('div');
-      card.className = 'metric';
-      card.innerHTML = `
-        <div class="metric-label">White Balance ΔE</div>
-        <div class="metric-value">${avg.toFixed(2)}</div>
-        <div class="metric-sub">średnia ΔE2000</div>
-        <div class="metric-sub" style="margin-top:6px">
-          Referencje jakości:
-          <br>• &lt; 1.0 → referencyjnie
-          <br>• &lt; 3.0 → bardzo dobrze
-          <br>• 3–5 → widoczne odchylenia
-          <br>• &gt; 5 → wymagana kalibracja
-        </div>
-
-        <div style="margin-top:6px">
-          <span class="badge ${maxv < 3 ? 'good' : 'warn'}">
-            ${maxv < 3 
-              ? `✓ max ΔE: ${maxv.toFixed(2)} (referencja < 3)` 
-              : `⚠ max ΔE: ${maxv.toFixed(2)} · cel: < 3.0`}
-          </span>
-        </div>
-      `;
-      wbCards.appendChild(card);
-    }
-  }
 
 
   const deCards = document.getElementById('deCards');
   deCards.innerHTML = '';
   act.forEach(ch => {
-    const res = (results[ch] || []).filter(r => r && r.de2 != null);
+    // Honor skipLevel36: exclude level 36 (idx 1) from stats when toggled
+    const res = (results[ch] || []).filter((r, idx) => r && r.de2 != null && !(skipFirstLevel() && idx === 1));
     if (!res.length) return;
-    const avgDe2 = (res.reduce((a, r) => a + r.de2, 0) / res.length).toFixed(2);
+    const avg2 = res.reduce((a, r) => a + r.de2, 0) / res.length;
+    const avgDe2 = avg2.toFixed(2);
     const maxDe2 = Math.max(...res.map(r => r.de2)).toFixed(2);
+    const minDe2 = Math.min(...res.map(r => r.de2)).toFixed(2);
     const avgITP = (res.reduce((a, r) => a + r.deITP, 0) / res.length).toFixed(1);
     const maxITP = Math.max(...res.map(r => r.deITP)).toFixed(1);
+    const minITP = Math.min(...res.map(r => r.deITP)).toFixed(1);
     const good2 = parseFloat(maxDe2) < 3;
     const goodITP = parseFloat(maxITP) < 10;
+    const assess = deAssessment(avg2);
     const c = document.createElement('div');
     c.className = 'metric';
     c.innerHTML = `<div class="metric-label" style="color:${COLORS[ch]}">Kanał ${ch}</div>
       <div class="metric-value">${avgDe2}</div>
-      <div class="metric-sub">ΔE2000 śr. · maks: ${maxDe2} <span class="badge ${good2?'good':'warn'}">${good2?'✓':'⚠'}</span></div>
-      <div class="metric-sub" style="margin-top:4px">ΔEITP: ${avgITP} śr. · ${maxITP} maks <span class="badge ${goodITP?'good':'warn'}">${goodITP?'✓':'⚠'}</span></div>`;
+      <div class="metric-sub" style="opacity:.8">średnia ΔE2000 (SDR)</div>
+      <div class="metric-sub" style="margin-top:8px;display:flex;justify-content:space-between;gap:6px">
+        <span>min <strong style="color:var(--text)">${minDe2}</strong></span>
+        <span>śr <strong style="color:var(--text)">${avgDe2}</strong></span>
+        <span>maks <strong style="color:var(--text)">${maxDe2}</strong> <span class="badge ${good2?'good':'warn'}">${good2?'✓':'⚠'}</span></span>
+      </div>
+      <div class="metric-sub" style="margin-top:6px;display:flex;justify-content:space-between;gap:6px">
+        <span>ITP min <strong style="color:var(--text)">${minITP}</strong></span>
+        <span>śr <strong style="color:var(--text)">${avgITP}</strong></span>
+        <span>maks <strong style="color:var(--text)">${maxITP}</strong> <span class="badge ${goodITP?'good':'warn'}">${goodITP?'✓':'⚠'}</span></span>
+      </div>
+      <div style="margin-top:8px;padding:6px 9px;border-radius:7px;background:${assess.bg};border:1px solid ${assess.border};display:flex;align-items:center;gap:7px">
+        <span style="font-size:14px">${assess.icon}</span>
+        <span style="font-size:10.5px;line-height:1.3;color:${assess.color};letter-spacing:.3px">${assess.label}</span>
+      </div>`;
     deCards.appendChild(c);
   });
 
-  // ── Per-channel ΔE panels ──
-  renderDePerChannel(act, results);
+  // ── Tabela wyników ΔE ──
+  renderDeTable(act, results);
+}
+
+function renderDeTable(act, results) {
+  const wrap = document.getElementById('deResultsTable');
+  if (!wrap) return;
+
+  // Indeksy bez poziomu 0 (czerni)
+  const pcIdx = LEVELS.map((_, i) => i).filter(i => i > 0);
+  const skip = skipFirstLevel();
+
+  const rows = act.map(ch => {
+    const res = results[ch] || [];
+    const valid = pcIdx
+      .filter(i => !(skip && i === 1))
+      .map(i => res[i])
+      .filter(r => r && r.de2 != null);
+    if (!valid.length) return null;
+    const de2 = valid.map(r => r.de2);
+    const itp = valid.map(r => r.deITP);
+    const avg = a => a.reduce((s,v)=>s+v,0)/a.length;
+    return {
+      ch,
+      color: COLORS[ch],
+      min2: Math.min(...de2), avg2: avg(de2), max2: Math.max(...de2),
+      minI: Math.min(...itp), avgI: avg(itp), maxI: Math.max(...itp),
+      assess: deAssessment(avg(de2))
+    };
+  }).filter(Boolean);
+
+  if (!rows.length) { wrap.innerHTML = '<div class="info-box">Brak danych ΔE — wprowadź pomiary.</div>'; return; }
+
+  const cell = (v, dec) => `<td style="text-align:right;font-family:var(--mono);padding:9px 14px">${v.toFixed(dec)}</td>`;
+
+  let html = `
+    <div style="overflow-x:auto">
+    <table class="de-table" style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:14px">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th rowspan="2" style="text-align:left;padding:9px 14px;color:var(--text2)">Kanał</th>
+          <th colspan="3" style="text-align:center;padding:7px 14px;color:var(--text2);border-bottom:1px solid var(--border)">ΔE2000 (SDR)</th>
+          <th colspan="3" style="text-align:center;padding:7px 14px;color:var(--text2);border-bottom:1px solid var(--border)">ΔE ITP (HDR)</th>
+          <th rowspan="2" style="text-align:left;padding:9px 14px;color:var(--text2)">Ocena (wg śr. ΔE2000)</th>
+        </tr>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="text-align:right;padding:6px 14px;color:var(--text3);font-weight:normal">min</th>
+          <th style="text-align:right;padding:6px 14px;color:var(--text3);font-weight:normal">śr</th>
+          <th style="text-align:right;padding:6px 14px;color:var(--text3);font-weight:normal">maks</th>
+          <th style="text-align:right;padding:6px 14px;color:var(--text3);font-weight:normal">min</th>
+          <th style="text-align:right;padding:6px 14px;color:var(--text3);font-weight:normal">śr</th>
+          <th style="text-align:right;padding:6px 14px;color:var(--text3);font-weight:normal">maks</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  rows.forEach(r => {
+    const max2good = r.max2 < 3;
+    const maxIgood = r.maxI < 10;
+    html += `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:9px 14px;font-weight:bold;color:${r.color}">${r.ch === 'W' ? 'White' : 'Kanał '+r.ch}</td>
+          ${cell(r.min2,2)}
+          ${cell(r.avg2,2)}
+          <td style="text-align:right;font-family:var(--mono);padding:9px 14px;font-weight:bold;color:${max2good?'#3a9d4a':'#cc6b2c'}">${r.max2.toFixed(2)}</td>
+          ${cell(r.minI,1)}
+          ${cell(r.avgI,1)}
+          <td style="text-align:right;font-family:var(--mono);padding:9px 14px;font-weight:bold;color:${maxIgood?'#3a9d4a':'#cc6b2c'}">${r.maxI.toFixed(1)}</td>
+          <td style="padding:9px 14px">
+            <span style="display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border-radius:7px;background:${r.assess.bg};border:1px solid ${r.assess.border};color:${r.assess.color};font-size:12px;letter-spacing:.3px">
+              <span style="font-size:14px">${r.assess.icon}</span>${r.assess.label}
+            </span>
+          </td>
+        </tr>`;
+  });
+
+  html += `</tbody></table></div>
+    <div style="margin-top:14px;font-size:11.5px;color:var(--text3);line-height:1.7;letter-spacing:.4px">
+      <strong style="color:var(--text2)">Skala oceny ΔE:</strong>
+      &nbsp;★ &lt;1 referencyjna &nbsp;·&nbsp; ✓ 1–2 praktycznie niewidoczna &nbsp;·&nbsp; ◐ 2–3 lekko zauważalna &nbsp;·&nbsp; ⚠ 3–5 wyraźnie widoczna &nbsp;·&nbsp; ✕ &gt;5 duży błąd
+    </div>`;
+
+  wrap.innerHTML = html;
 }
 
 function renderDePerChannel(act, results) {
@@ -1866,14 +1889,20 @@ function renderDePerChannel(act, results) {
     const color = COLORS[ch];
     const de2vals  = pcIdx.map(i => { const r = res[i]; return (r && r.de2 != null) ? parseFloat(r.de2.toFixed(3)) : null; });
     const deITPvals = pcIdx.map(i => { const r = res[i]; return (r && r.deITP != null) ? parseFloat(r.deITP.toFixed(3)) : null; });
-    // Średnia/maks pomijają poziom 36 (idx === 1) gdy opcja włączona; wykres zachowuje wszystkie punkty
+    // Średnia pomija poziom 36 (idx === 1) gdy opcja włączona; min/maks też.
+    // Wykres zachowuje wszystkie punkty.
     const valid = pcIdx.filter(i => !(skipFirstLevel() && i === 1)).map(i => res[i]).filter(r => r && r.de2 != null);
     const avgDe2 = valid.length ? (valid.reduce((a,r) => a+r.de2, 0)/valid.length).toFixed(2) : '—';
     const maxDe2 = valid.length ? Math.max(...valid.map(r=>r.de2)).toFixed(2) : '—';
+    const minDe2 = valid.length ? Math.min(...valid.map(r=>r.de2)).toFixed(2) : '—';
     const avgITP = valid.length ? (valid.reduce((a,r) => a+r.deITP, 0)/valid.length).toFixed(1) : '—';
     const maxITP = valid.length ? Math.max(...valid.map(r=>r.deITP)).toFixed(1) : '—';
+    const minITP = valid.length ? Math.min(...valid.map(r=>r.deITP)).toFixed(1) : '—';
     const good2 = parseFloat(maxDe2) < 3;
     const goodITP = parseFloat(maxITP) < 10;
+
+    // Ocena jakości wg skali ΔE (na bazie średniej ΔE2000)
+    const assess = deAssessment(parseFloat(avgDe2));
 
     // Create block
     const block = document.createElement('div');
@@ -1882,11 +1911,19 @@ function renderDePerChannel(act, results) {
       <div class="de-ch-header">
         <span class="de-ch-name" style="color:${color}">Kanał ${ch}</span>
         <div class="de-ch-badges">
-          <span class="badge ${good2?'good':'warn'}">ΔE2000 maks: ${maxDe2} ${good2?'✓':'⚠'}</span>
-          <span class="badge ${goodITP?'good':'warn'}">ΔEITP maks: ${maxITP} ${goodITP?'✓':'⚠'}</span>
+          <span class="badge neutral">ΔE2000 min: ${minDe2}</span>
           <span class="badge neutral">ΔE2000 śr: ${avgDe2}</span>
+          <span class="badge ${good2?'good':'warn'}">ΔE2000 maks: ${maxDe2} ${good2?'✓':'⚠'}</span>
+          <span class="badge neutral">ΔEITP min: ${minITP}</span>
           <span class="badge neutral">ΔEITP śr: ${avgITP}</span>
+          <span class="badge ${goodITP?'good':'warn'}">ΔEITP maks: ${maxITP} ${goodITP?'✓':'⚠'}</span>
         </div>
+      </div>
+      <div class="de-assess" style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;padding:7px 11px;border-radius:8px;background:${assess.bg};border:1px solid ${assess.border}">
+        <span style="font-size:16px">${assess.icon}</span>
+        <span style="font-family:var(--mono);font-size:12px;color:${assess.color};letter-spacing:.5px">
+          <strong>Ocena (śr. ΔE2000 = ${avgDe2}):</strong> ${assess.label}
+        </span>
       </div>
       <div class="de-ch-charts">
         <div class="chart-wrap" style="margin-bottom:0;flex:1">
@@ -1914,12 +1951,12 @@ function renderDePerChannel(act, results) {
     charts['de2_' + ch] = new Chart(document.getElementById('de2_' + ch), {
       type: 'bar',
       data: { labels: pcLabels, datasets: [makeDataset('ΔE2000 ' + ch, de2vals)] },
-      options: makeChartOptions('ΔE2000', 0)
+      options: makeChartOptions('ΔE2000 (SDR)', 0)
     });
     charts['deITP_' + ch] = new Chart(document.getElementById('deITP_' + ch), {
       type: 'bar',
       data: { labels: pcLabels, datasets: [makeDataset('ΔE ITP ' + ch, deITPvals)] },
-      options: makeChartOptions('ΔE ITP', 0)
+      options: makeChartOptions('ΔE ITP (HDR)', 0)
     });
   });
 }
