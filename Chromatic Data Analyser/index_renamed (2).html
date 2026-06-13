@@ -940,14 +940,18 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
 
   <!-- DE VIEW -->
   <div id="view-de" style="display:none">
-    <div class="section-label">Błąd koloru względem punktu D65</div>
+    <div class="section-label">Błąd koloru względem targetu sRGB</div>
     <div class="legend" id="deLegend"></div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--mono);font-size:12px;color:var(--text2);margin-bottom:12px">
+      <input type="checkbox" id="skipLevel36" onchange="renderCharts()" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer">
+      Pomiń poziom 36 w średniej ΔE (start od 73) — wykres nadal pokazuje wszystkie punkty
+    </label>
     <div class="chart-wrap">
-      <div class="chart-title">ΔE2000 — drift względem punktu 100% kanału</div>
+      <div class="chart-title">ΔE2000 — błąd chromatyczny względem targetu sRGB</div>
       <div style="height:240px"><canvas id="de2Chart"></canvas></div>
     </div>
     <div class="chart-wrap">
-      <div class="chart-title">ΔE ITP — drift HDR względem punktu 100% kanału</div>
+      <div class="chart-title">ΔE ITP — błąd chromatyczny HDR względem targetu sRGB</div>
       <div style="height:240px"><canvas id="deITPChart"></canvas></div>
     </div>
     <div class="section-grid" id="deCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:20px"></div>
@@ -955,8 +959,8 @@ button.danger:hover { background: rgba(255,51,51,.06); border-color: rgba(255,51
     <!-- Per-channel breakdown -->
     <div class="section-label">Błędy ΔE per kanał</div>
     <div class="info-box" style="margin-bottom:16px">
-      Wykresy poniżej pokazują ΔE2000 i ΔE ITP osobno dla każdego kanału (<strong>R, G, B, W</strong>).
-      Chromatyczność znormalizowana do Y=100 — błąd czysto barwny bez wpływu luminancji.
+      Wykresy poniżej pokazują ΔE2000 i ΔE ITP osobno dla każdego kanału (<strong>R, G, B, W</strong>) względem
+      idealnego targetu sRGB, przy luminancji Y równej zmierzonej — błąd czysto barwny bez wpływu luminancji.
     </div>
     <div id="dePerChannelWrap"></div>
   </div>
@@ -1191,6 +1195,14 @@ let LEVEL_PCT = [0,14.1,28.6,42.7,57.3,71.4,85.9,100];
 const CHANNELS = ['R','G','B','W'];
 const D65 = { x: 0.3127, y: 0.3290 };
 
+// Idealne targety chromatyczne sRGB dla każdego kanału (ΔE liczone względem nich)
+const SRGB_TARGETS = {
+  R: { x: 0.6400, y: 0.3300 },
+  G: { x: 0.3000, y: 0.6000 },
+  B: { x: 0.1500, y: 0.0600 },
+  W: { x: 0.3127, y: 0.3290 }  // D65
+};
+
 // Reference white XYZ (D65, Y=100)
 const D65_XYZ = xyYtoXYZ(D65.x, D65.y, 100);
 const D65_Lab = XYZtoLab(D65_XYZ.X, D65_XYZ.Y, D65_XYZ.Z);
@@ -1322,7 +1334,7 @@ function parsePoint(ch, i) {
 
 function getChannelResults(ch) {
   const pts = LEVELS.map((_, i) => parsePoint(ch, i));
-  // Use the 100% point as channel reference for relative luminance
+  // 100% point used only for relative luminance display
   const ref100 = pts[pts.length - 1];
   const Y100 = ref100 ? ref100.Y : null;
 
@@ -1336,30 +1348,25 @@ function getChannelResults(ch) {
     const dx = p.x - D65.x;
     const dy = p.y - D65.y;
 
-    // WB ΔE liczone wyłącznie od chromatyczności
-    // luminancja zostaje znormalizowana do stałego Y=100
+    // ΔE względem idealnego targetu sRGB dla tego kanału,
+    // przy tej samej luminancji Y co zmierzony punkt → czysty błąd chromatyczny.
+    let de2 = null;
+    let deITP = null;
 
-    let de2 = 0;
-    let deITP = 0;
+    const tgt = SRGB_TARGETS[ch];
+    if (tgt) {
+      // Target sRGB, Y = zmierzony (eliminuje składową luminancji)
+      const tgtXYZ = xyYtoXYZ(tgt.x, tgt.y, p.Y);
+      const tgtLab = XYZtoLab(tgtXYZ.X, tgtXYZ.Y, tgtXYZ.Z);
+      const tgtITP = XYZtoICtCp(tgtXYZ.X, tgtXYZ.Y, tgtXYZ.Z);
 
-    if (ref100) {
+      // Zmierzony punkt, też Y = zmierzony
+      const measXYZ = xyYtoXYZ(p.x, p.y, p.Y);
+      const measLab = XYZtoLab(measXYZ.X, measXYZ.Y, measXYZ.Z);
+      const measITP = XYZtoICtCp(measXYZ.X, measXYZ.Y, measXYZ.Z);
 
-      // aktualny punkt — stała luminancja
-      const normXYZ = xyYtoXYZ(p.x, p.y, 100);
-      const normLab = XYZtoLab(normXYZ.X, normXYZ.Y, normXYZ.Z);
-      const normITP = XYZtoICtCp(normXYZ.X, normXYZ.Y, normXYZ.Z);
-
-      // punkt referencyjny 100% — też stała luminancja
-      const refXYZ = xyYtoXYZ(ref100.x, ref100.y, 100);
-      const refLab = XYZtoLab(refXYZ.X, refXYZ.Y, refXYZ.Z);
-      const refITP = XYZtoICtCp(refXYZ.X, refXYZ.Y, refXYZ.Z);
-
-      de2 = dE2000(
-        refLab.L, refLab.a, refLab.b,
-        normLab.L, normLab.a, normLab.b
-      );
-
-      deITP = dEITP(refITP, normITP);
+      de2  = dE2000(tgtLab.L, tgtLab.a, tgtLab.b, measLab.L, measLab.a, measLab.b);
+      deITP = dEITP(tgtITP, measITP);
     }
 
     // Poziom 0 (czerń) — chromatyczność jest nieokreślona/zaszumiona,
@@ -1375,6 +1382,11 @@ function getChannelResults(ch) {
 
 function activeChannels() {
   return CHANNELS.filter(ch => data[ch].some(p => p.x !== '' && p.y !== '' && p.Y !== ''));
+}
+
+// Czy pomijać poziom 36 (pierwszy niezerowy, idx===1) w średnich ΔE
+function skipFirstLevel() {
+  return document.getElementById('skipLevel36')?.checked === true;
 }
 
 // ─── UI helpers ──────────────────────────────────────────────────────────────
@@ -1774,7 +1786,7 @@ function renderCharts() {
     const wbCards = document.getElementById('wbCards');
     wbCards.innerHTML = '';
 
-    const valid = wbRes.filter(r => r && r.de2 != null);
+    const valid = wbRes.filter((r, idx) => r && r.de2 != null && !(skipFirstLevel() && idx === 1));
 
     if (valid.length) {
       const avg = valid.reduce((a, r) => a + r.de2, 0) / valid.length;
@@ -1854,7 +1866,8 @@ function renderDePerChannel(act, results) {
     const color = COLORS[ch];
     const de2vals  = pcIdx.map(i => { const r = res[i]; return (r && r.de2 != null) ? parseFloat(r.de2.toFixed(3)) : null; });
     const deITPvals = pcIdx.map(i => { const r = res[i]; return (r && r.deITP != null) ? parseFloat(r.deITP.toFixed(3)) : null; });
-    const valid = pcIdx.map(i => res[i]).filter(r => r && r.de2 != null);
+    // Średnia/maks pomijają poziom 36 (idx === 1) gdy opcja włączona; wykres zachowuje wszystkie punkty
+    const valid = pcIdx.filter(i => !(skipFirstLevel() && i === 1)).map(i => res[i]).filter(r => r && r.de2 != null);
     const avgDe2 = valid.length ? (valid.reduce((a,r) => a+r.de2, 0)/valid.length).toFixed(2) : '—';
     const maxDe2 = valid.length ? Math.max(...valid.map(r=>r.de2)).toFixed(2) : '—';
     const avgITP = valid.length ? (valid.reduce((a,r) => a+r.deITP, 0)/valid.length).toFixed(1) : '—';
