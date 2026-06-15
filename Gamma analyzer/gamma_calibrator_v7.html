@@ -28,7 +28,7 @@
 .mode-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:28px}
 .mc{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;cursor:pointer;transition:all 0.18s;overflow:hidden;text-align:center}
 .mc::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:2px;background:var(--accent);transform:scaleX(0);transition:transform 0.18s;transform-origin:left}
-.mc:hover{border-color:#2a2a2a;background:#141414}.mc:hover::after{transform:scaleX(0.5)}
+.mc:hover{border-color:var(--border);background:var(--surface)}.mc:hover::after{transform:scaleX(0.5)}
 .mc.on{border-color:var(--accent);background:rgba(139,21,186,0.06)}.mc.on::after{transform:scaleX(1)}
 .mc .cm{font-family:var(--mono);font-size:20px;color:var(--accent);font-weight:bold;letter-spacing:2px;text-transform:uppercase}
 .mc.on .cm{text-shadow:0 0 18px rgba(139,21,186,0.6)}
@@ -122,6 +122,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .import-status{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;margin-top:8px;padding:6px 10px;border-radius:4px;display:none}
 .import-status.ok{display:block;color:#33ff33;background:rgba(51,255,51,0.06);border:1px solid rgba(51,255,51,0.2)}
 .import-status.err{display:block;color:#ff4444;background:rgba(255,68,68,0.06);border:1px solid rgba(255,68,68,0.2)}
+
+html.theme-anim, body.theme-anim, body.theme-anim * { transition: background-color .9s ease, color .9s ease, border-color .9s ease, fill .9s ease, box-shadow .9s ease !important; }
 </style>
 
 <div class="app"><div class="inner"><div class="two-col"><div class="main-col">
@@ -846,4 +848,27 @@ onWzorSlider = function(val) {
   _origOnWzorSlider(val);
 };
 
+</script>
+
+<style>
+body.light {
+  --bg: #f4f4f7;
+  --surface: #ffffff;
+  --border: #d6d8de;
+  --accent: #8b15ba;
+  --text: #1a1a1c;
+  --muted: #8c8c94;
+  --canvas-bg: #dcdce2;
+}
+</style>
+<script>
+(function(){
+  var __at=null; function applyTheme(light){ if(!document.body) return; document.documentElement.classList.add('theme-anim'); document.body.classList.add('theme-anim'); document.body.classList.toggle('light', !!light); clearTimeout(__at); __at=setTimeout(function(){document.documentElement.classList.remove('theme-anim'); document.body.classList.remove('theme-anim');},950); }
+  function readLS(){ try { return localStorage.getItem('suite-theme')==='light'; } catch(e){ return false; } }
+  applyTheme(readLS());
+  document.addEventListener('DOMContentLoaded', function(){ applyTheme(readLS()); });
+  window.addEventListener('message', function(ev){
+    if(ev.data && ev.data.type==='suite-theme'){ if(!ev.data.noToggle) applyTheme(ev.data.light); }
+  });
+})();
 </script>

@@ -223,7 +223,7 @@ body::before {
 }
 .field-input {
   width: 100%;
-  background: #0a0a0a;
+  background: var(--bg);
   border: 1px solid #1a1a1a;
   color: var(--text);
   font-family: var(--mono);
@@ -439,7 +439,7 @@ body::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: #1a1a1a;
+  background: var(--surface);
   transform: translateX(-100%);
   transition: transform 0.2s;
   z-index: 0;
@@ -665,6 +665,8 @@ body::before {
 .fs-label.lbl-before { left: 16px; color: rgba(255,255,255,0.6); }
 .fs-label.lbl-after  { right: 16px; color: var(--accent); }
 
+
+html.theme-anim, body.theme-anim, body.theme-anim * { transition: background-color .9s ease, color .9s ease, border-color .9s ease, fill .9s ease, box-shadow .9s ease !important; }
 </style>
 </head>
 <body>
@@ -1198,5 +1200,30 @@ window.addEventListener('touchend', () => fsDragging = false);
 window.addEventListener('resize', () => { if (fsOverlay.classList.contains('active')) renderFsPreview(); });
 
 </script>
+<style>
+/* ── Suite light theme (purple accents preserved) — injected ── */
+body.light {
+  --bg: #f4f4f7;
+  --surface: #ffffff;
+  --border: #d6d8de;
+  --accent: #8b15ba;
+  --text: #1a1a1c;
+  --muted: #8c8c94;
+  --canvas-bg: #dcdce2;
+}
+</style>
+<script>
+/* Suite-wide theme listener (shell broadcasts + shared localStorage) */
+(function(){
+  var __at=null; function applyTheme(light){ if(!document.body) return; document.documentElement.classList.add('theme-anim'); document.body.classList.add('theme-anim'); document.body.classList.toggle('light', !!light); clearTimeout(__at); __at=setTimeout(function(){document.documentElement.classList.remove('theme-anim'); document.body.classList.remove('theme-anim');},950); }
+  function readLS(){ try { return localStorage.getItem('suite-theme')==='light'; } catch(e){ return false; } }
+  applyTheme(readLS());
+  document.addEventListener('DOMContentLoaded', function(){ applyTheme(readLS()); });
+  window.addEventListener('message', function(ev){
+    if(ev.data && ev.data.type==='suite-theme'){ if(!ev.data.noToggle) applyTheme(ev.data.light); }
+  });
+})();
+</script>
+
 </body>
 </html>

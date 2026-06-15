@@ -227,7 +227,7 @@
   }
 
   thead tr {
-    background: #0a0a0a;
+    background: var(--surface2);
     border-bottom: 1px solid var(--border);
   }
 
@@ -296,7 +296,7 @@
   .row-btn:hover {
     border-color: var(--border-light);
     color: var(--text);
-    background: #141414;
+    background: var(--surface2);
   }
   .row-btn:hover::after { transform: scaleX(0.5); }
   .row-btn.active {
@@ -332,7 +332,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px 18px;
-    background: #0a0a0a;
+    background: var(--surface2);
     border-top: 1px solid var(--border);
     justify-content: space-between;
   }
@@ -457,6 +457,8 @@
     .swatch { width: 80px; height: 80px; }
     .val-input { font-size: 11px; }
   }
+
+html.theme-anim, body.theme-anim, body.theme-anim * { transition: background-color .9s ease, color .9s ease, border-color .9s ease, fill .9s ease, box-shadow .9s ease !important; }
 </style>
 </head>
 <body>
@@ -1358,5 +1360,35 @@ window.addEventListener('message', (e) => {
   }
 });
 </script>
+<style>
+/* ── Suite light theme (purple accents preserved) — injected ── */
+body.light {
+  --bg: #f4f4f7;
+  --surface: #ffffff;
+  --border: #d6d8de;
+  --accent: #8b15ba;
+  --text: #1a1a1c;
+  --muted: #8c8c94;
+  --surface2: #eef0f3;
+  --accent2: #6e10a0;
+  --canvas-bg: #dcdce2;
+  --input-bg: #ffffff;
+  --input-border: #d6d8de;
+  --border-light: #c4c6ce;
+}
+</style>
+<script>
+/* Suite-wide theme listener (shell broadcasts + shared localStorage) */
+(function(){
+  var __at=null; function applyTheme(light){ if(!document.body) return; document.documentElement.classList.add('theme-anim'); document.body.classList.add('theme-anim'); document.body.classList.toggle('light', !!light); clearTimeout(__at); __at=setTimeout(function(){document.documentElement.classList.remove('theme-anim'); document.body.classList.remove('theme-anim');},950); }
+  function readLS(){ try { return localStorage.getItem('suite-theme')==='light'; } catch(e){ return false; } }
+  applyTheme(readLS());
+  document.addEventListener('DOMContentLoaded', function(){ applyTheme(readLS()); });
+  window.addEventListener('message', function(ev){
+    if(ev.data && ev.data.type==='suite-theme'){ if(!ev.data.noToggle) applyTheme(ev.data.light); }
+  });
+})();
+</script>
+
 </body>
 </html>

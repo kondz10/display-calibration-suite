@@ -22,6 +22,7 @@
   --text3:   #3a3a3a;
   --mono: 'Share Tech Mono', monospace;
   --sans: 'Rajdhani', sans-serif;
+  --canvas-bg: #000000;
   --r: 10px;
   --fs-xs:   13px;
   --fs-sm:   15px;
@@ -29,6 +30,40 @@
   --fs-lg:   19px;
   --fs-xl:   22px;
 }
+/* ── Light theme — purple accents preserved ── */
+body.light {
+  --bg:      #f4f4f7;
+  --surface: #ffffff;
+  --surface2: #eef0f3;
+  --border:  #d6d8de;
+  --accent:  #8b15ba;
+  --accent2: #6e10a0;
+  --accent3: #1a9e1a;
+  --warn:    #d97500;
+  --danger:  #d11030;
+  --text:    #1a1a1c;
+  --muted:   #8c8c94;
+  --text2:   #62626a;
+  --text3:   #b4b4bc;
+  --canvas-bg: #dcdce2;
+}
+/* ── Theme toggle button ── */
+.theme-toggle {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 1px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  margin-left: 14px;
+}
+.theme-toggle:hover { background: var(--accent); color: #fff; }
+.theme-toggle .theme-ico { font-size: 15px; line-height: 1; }
 html { height: 100%; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -490,6 +525,61 @@ select:hover { border-color: var(--accent); }
 }
 .btn-export:hover { border-color: #2a2a2a; color: var(--text2); }
 
+/* Crop section */
+.crop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.crop-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.crop-label {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.crop-input {
+  padding: 6px 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  outline: none;
+  transition: border-color 0.18s;
+  width: 100%;
+}
+.crop-input:focus { border-color: var(--accent); }
+.crop-preview {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  min-height: 14px;
+}
+.crop-preview span { color: var(--accent); }
+.btn-crop-reset {
+  width: 100%;
+  padding: 7px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .18s, border-color .18s;
+}
+.btn-crop-reset:hover { border-color: var(--danger); color: var(--danger); }
+
 /* Shortcuts */
 .shortcuts { display: flex; flex-direction: column; gap: 4px; }
 .shortcut-row { display: flex; justify-content: space-between; align-items: center; }
@@ -517,7 +607,7 @@ select:hover { border-color: var(--accent); }
   flex: 1;
   position: relative;
   overflow: hidden;
-  background: #000;
+  background: var(--canvas-bg);
 }
 
 #display-canvas { position: absolute; top: 0; left: 0; }
@@ -612,7 +702,7 @@ select:hover { border-color: var(--accent); }
 
 /* ── LEGEND ── */
 .legend-panel {
-  width: 90px;
+  width: 130px;
   flex-shrink: 0;
   background: var(--surface);
   border-left: 1px solid var(--border);
@@ -625,7 +715,7 @@ select:hover { border-color: var(--accent); }
 
 #legend-canvas {
   flex: 1;
-  width: 58px;
+  width: 98px;
 }
 
 /* ── SCROLLBAR ── */
@@ -633,6 +723,57 @@ select:hover { border-color: var(--accent); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── GLOBAL DRAG OVERLAY ── */
+#global-drop-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(8,8,8,0.88);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  pointer-events: none;
+}
+#global-drop-overlay.active {
+  display: flex;
+  pointer-events: all;
+}
+.gdrop-box {
+  border: 2px dashed var(--accent);
+  border-radius: 20px;
+  padding: 60px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 0 60px rgba(139,21,186,0.25), inset 0 0 40px rgba(139,21,186,0.06);
+  animation: gdrop-pulse 1.2s ease-in-out infinite;
+}
+@keyframes gdrop-pulse {
+  0%, 100% { border-color: var(--accent); box-shadow: 0 0 40px rgba(139,21,186,0.2); }
+  50%       { border-color: #c040f0;      box-shadow: 0 0 70px rgba(139,21,186,0.45); }
+}
+.gdrop-icon {
+  font-size: 52px;
+  line-height: 1;
+  color: var(--accent);
+  filter: drop-shadow(0 0 18px rgba(139,21,186,0.6));
+}
+.gdrop-title {
+  font-family: var(--mono);
+  font-size: 20px;
+  letter-spacing: 5px;
+  color: var(--text);
+  text-transform: uppercase;
+}
+.gdrop-sub {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
 
 /* ── SCAN ANIMATION ── */
 @keyframes scan {
@@ -647,6 +788,8 @@ select:hover { border-color: var(--accent); }
   pointer-events: none;
   z-index: 5;
 }
+
+html.theme-anim, body.theme-anim, body.theme-anim * { transition: background-color .9s ease, color .9s ease, border-color .9s ease, fill .9s ease, box-shadow .9s ease !important; }
 </style>
 </head>
 <body>
@@ -803,6 +946,31 @@ select:hover { border-color: var(--accent); }
       <button class="btn-export-grid" id="btn-export-grid-csv" style="display:none;">↓ Export Grid CSV</button>
     </div>
 
+    <!-- Crop -->
+    <div class="section">
+      <div class="section-title">Crop (stałe dla wszystkich plików)</div>
+      <div class="crop-grid">
+        <div class="crop-field">
+          <span class="crop-label">Top [px]</span>
+          <input class="crop-input" id="crop-top" type="number" min="0" value="0">
+        </div>
+        <div class="crop-field">
+          <span class="crop-label">Bottom [px]</span>
+          <input class="crop-input" id="crop-bottom" type="number" min="0" value="0">
+        </div>
+        <div class="crop-field">
+          <span class="crop-label">Left [px]</span>
+          <input class="crop-input" id="crop-left" type="number" min="0" value="0">
+        </div>
+        <div class="crop-field">
+          <span class="crop-label">Right [px]</span>
+          <input class="crop-input" id="crop-right" type="number" min="0" value="0">
+        </div>
+      </div>
+      <div class="crop-preview" id="crop-preview">brak przycięcia</div>
+      <button class="btn-crop-reset" id="btn-crop-reset">⊘ Reset Crop</button>
+    </div>
+
     <!-- Export -->
     <div class="section">
       <div class="section-title">Export</div>
@@ -858,10 +1026,19 @@ select:hover { border-color: var(--accent); }
 
   <!-- LEGEND -->
   <div class="legend-panel">
-    <canvas id="legend-canvas" width="58"></canvas>
+    <canvas id="legend-canvas" width="98"></canvas>
   </div>
 
 </main>
+
+<!-- GLOBAL DROP OVERLAY -->
+<div id="global-drop-overlay">
+  <div class="gdrop-box">
+    <div class="gdrop-icon">⬇</div>
+    <div class="gdrop-title">Upuść plik .h5</div>
+    <div class="gdrop-sub">LMK2000 HDF5 · Luminance Measurement</div>
+  </div>
+</div>
 
 <!-- h5wasm CDN -->
 <script src="https://cdn.jsdelivr.net/npm/h5wasm@0.7.5/dist/iife/h5wasm.js"></script>
@@ -1421,16 +1598,20 @@ class Legend {
     ctx.lineWidth = 1;
     ctx.strokeRect(barX - 0.5, topY - 0.5, barW + 1, barH + 1);
 
-    // ── Format a value compactly ──
+    // ── Format value with ×10ⁿ notation when needed ──
     function fmtVal(v) {
       if (v === 0) return '0';
       const av = Math.abs(v);
-      // Use scientific notation for very large or very small values
-      if (av >= 1e5 || (av < 0.001 && av > 0)) {
-        const exp = Math.floor(Math.log10(av));
-        const man = v / Math.pow(10, exp);
-        const manStr = man.toFixed(2).replace(/\.?0+$/, '');
-        return manStr + 'e' + exp;
+      const supExp = e => String(e).split('').map(c=>({'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'}[c]||c)).join('');
+      if (av >= 1e5) {
+        const e = Math.floor(Math.log10(av));
+        const m = (v / Math.pow(10, e));
+        return (Math.abs(m - Math.round(m)) < 0.005 ? Math.round(m) : m.toFixed(2).replace(/\.?0+$/,'')) + '×10' + supExp(e);
+      }
+      if (av < 0.001 && av > 0) {
+        const e = Math.floor(Math.log10(av));
+        const m = (v / Math.pow(10, e));
+        return (Math.abs(m - Math.round(m)) < 0.005 ? Math.round(m) : m.toFixed(2).replace(/\.?0+$/,'')) + '×10' + supExp(e);
       }
       if (av >= 10000) return v.toFixed(0);
       if (av >= 1000)  return v.toFixed(0);
@@ -1438,8 +1619,7 @@ class Legend {
       if (av >= 10)    return v.toFixed(2);
       if (av >= 1)     return v.toFixed(3);
       if (av >= 0.1)   return v.toFixed(4);
-      if (av >= 0.01)  return v.toFixed(5);
-      return v.toFixed(6);
+      return v.toFixed(5);
     }
 
     // ── Build tick list dynamically from actual data range ──
@@ -1550,7 +1730,7 @@ class Legend {
     }
 
     // Draw ticks and labels
-    ctx.font = '8px "Share Tech Mono"';
+    ctx.font = '9px "Share Tech Mono"';
     ctx.textAlign = 'right';
 
     for (const tk of filtered) {
@@ -1660,9 +1840,9 @@ class ROIManager {
       if (this.mode === 'ring') {
         const cx = (this._x1 + x) / 2;
         const cy = (this._y1 + y) / 2;
-        const rOuter = Math.sqrt((x - this._x1)**2 + (y - this._y1)**2) / 2;
-        const rInner = rOuter * this.ringRatio;
-        if (rOuter < 4) return true;
+        const rInner = Math.sqrt((x - this._x1)**2 + (y - this._y1)**2) / 2;
+        const rOuter = rInner / this.ringRatio;
+        if (rInner < 2) return true;
         const statsOuter = this._calcStatsCircle(lum, w, h, cx, cy, rOuter);
         const statsInner = this._calcStatsCircle(lum, w, h, cx, cy, rInner);
         const statsRing  = this._calcStatsRing(lum, w, h, cx, cy, rInner, rOuter);
@@ -1730,12 +1910,12 @@ class ROIManager {
   // Recompute ring stats after radius change
   _recomputeRing(lum, w, h) {
     if (!this._ring) return;
-    const {cx, cy, rOuter} = this._ring;
-    const rInner = rOuter * this.ringRatio;
+    const {cx, cy, rInner} = this._ring;
+    const rOuter = rInner / this.ringRatio;
     const statsOuter = this._calcStatsCircle(lum, w, h, cx, cy, rOuter);
     const statsInner = this._calcStatsCircle(lum, w, h, cx, cy, rInner);
     const statsRing  = this._calcStatsRing(lum, w, h, cx, cy, rInner, rOuter);
-    this._ring = {...this._ring, rInner, statsOuter, statsInner, statsRing};
+    this._ring = {...this._ring, rOuter, statsOuter, statsInner, statsRing};
     this.onUpdate({type:'all'});
   }
 
@@ -1879,7 +2059,8 @@ class ROIManager {
         const availR = Math.min(x2-x1, y2-y1) * 0.28;
         // stats are recalculated on demand via lum ref — show if we can get them from onUpdate
         if (this._rectStats) {
-          drawValueLabel(ctx, rcx, rcy, this._rectStats.mean, availR);
+          drawValueLabel(ctx, rcx, rcy, this._rectStats.mean, availR,
+            { color: '#00e5ff', unitColor: 'rgba(0,229,255,0.80)', minFont: 18 });
         }
       }
     }
@@ -1936,13 +2117,13 @@ class ROIManager {
               const cellCx = cx + cw/2;
               const cellCy = cy + ch/2;
 
-              // Adaptive font size — purely proportional to cell, no minimum clamp
-              const fontSize = Math.min(cw / 3.6, ch / 1.9, 28);
-              const unitSize = fontSize * 0.65;
+              // Adaptive font size — proportional to cell, capped to stay compact (+15%)
+              const fontSize = Math.min(cw / 5.65, ch / 3.48, 25);
+              const unitSize = Math.max(8, fontSize * 0.55);
 
               if (fontSize < 5) {
                 // Cell too tiny — just draw a dot
-                ctx.fillStyle = '#8b15ba';
+                ctx.fillStyle = '#00e5ff';
                 ctx.beginPath(); ctx.arc(cellCx, cellCy, 2, 0, Math.PI*2); ctx.fill();
               } else {
                 // Measure text with correct fonts
@@ -1951,29 +2132,29 @@ class ROIManager {
                 ctx.font = `${unitSize}px "Share Tech Mono"`;
                 const uw = ctx.measureText(unit).width;
                 const totalW = Math.max(tw, uw);
-                const padX = Math.max(3, fontSize * 0.25);
-                const padY = Math.max(2, fontSize * 0.18);
+                const padX = Math.max(4, fontSize * 0.3);
+                const padY = Math.max(3, fontSize * 0.2);
                 const boxH = fontSize + unitSize + padY * 2 + 2;
                 const boxW = totalW + padX * 2;
 
-                // Background pill
-                ctx.fillStyle = 'rgba(0,0,0,0.62)';
+                // Strong dark pill for guaranteed contrast on any background
+                ctx.fillStyle = 'rgba(0,0,0,0.80)';
                 const bx = cellCx - boxW/2, by = cellCy - boxH/2;
                 if (ctx.roundRect) {
-                  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, Math.min(4, fontSize * 0.3)); ctx.fill();
+                  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, Math.min(5, fontSize * 0.3)); ctx.fill();
                 } else {
                   ctx.fillRect(bx, by, boxW, boxH);
                 }
 
-                // Value
-                ctx.fillStyle = '#8b15ba';
+                // Value — white
+                ctx.fillStyle = '#ffffff';
                 ctx.font = `bold ${fontSize}px "Share Tech Mono"`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'alphabetic';
                 ctx.fillText(txt, cellCx, by + padY + fontSize);
 
-                // Unit
-                ctx.fillStyle = 'rgba(139,21,186,0.70)';
+                // Unit — cyan
+                ctx.fillStyle = 'rgba(0,229,255,0.85)';
                 ctx.font = `${unitSize}px "Share Tech Mono"`;
                 ctx.fillText(unit, cellCx, by + padY + fontSize + 2 + unitSize);
 
@@ -2006,7 +2187,8 @@ class ROIManager {
       ctx.beginPath(); ctx.moveTo(cx-10,cy); ctx.lineTo(cx+10,cy); ctx.moveTo(cx,cy-10); ctx.lineTo(cx,cy+10); ctx.stroke();
       // label
       if (this._circle && this._circle.stats) {
-        drawValueLabel(ctx, cx, cy, this._circle.stats.mean, r * 0.40);
+        drawValueLabel(ctx, cx, cy, this._circle.stats.mean, r * 0.50,
+          { color: '#ffffff', unitColor: 'rgba(255,255,255,0.75)', minFont: 18 });
       }
     }
 
@@ -2016,8 +2198,8 @@ class ROIManager {
       let cx, cy, rInner, rOuter;
       if (ringPreview) {
         cx = (this._x1+this._x2)/2; cy = (this._y1+this._y2)/2;
-        rOuter = Math.sqrt((this._x2-this._x1)**2+(this._y2-this._y1)**2)/2;
-        rInner = rOuter * this.ringRatio;
+        rInner = Math.sqrt((this._x2-this._x1)**2+(this._y2-this._y1)**2)/2;
+        rOuter = rInner / this.ringRatio;
       } else {
         ({cx,cy,rInner,rOuter} = this._ring);
       }
@@ -2034,17 +2216,39 @@ class ROIManager {
       // center crosshair
       ctx.strokeStyle = '#8b15ba'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(cx-10,cy); ctx.lineTo(cx+10,cy); ctx.moveTo(cx,cy-10); ctx.lineTo(cx,cy+10); ctx.stroke();
-      // labels: inner (centre) and ring annulus
+      // labels: centre (white) and ring annulus (cyan), both large & legible
       if (this._ring) {
         const ringMidR = (rInner + rOuter) / 2;
+        const IW = this._imgW || 0;
+        const IH = this._imgH || 0;
+        // Centre disc value — white, sized to the inner disc
         drawValueLabel(ctx, cx, cy,
           this._ring.statsInner ? this._ring.statsInner.mean : null,
-          rInner * 0.38);
-        drawValueLabel(ctx,
-          cx + ringMidR * 0.707,
-          cy - ringMidR * 0.707,
-          this._ring.statsRing ? this._ring.statsRing.mean : null,
-          (rOuter - rInner) * 0.32);
+          rInner * 0.55,
+          { color: '#ffffff', unitColor: 'rgba(255,255,255,0.75)', minFont: 18,
+            bounds: IW > 0 ? {x:0, y:0, w:IW, h:IH} : null });
+        // Annulus value — try 4 positions (top-right, bottom-right, top-left, bottom-left)
+        // pick the first fully inside the image
+        const annVal = this._ring.statsRing ? this._ring.statsRing.mean : null;
+        if (annVal !== null) {
+          const angles = [
+            { ax: cx + ringMidR * 0.707, ay: cy - ringMidR * 0.707 },
+            { ax: cx + ringMidR * 0.707, ay: cy + ringMidR * 0.707 },
+            { ax: cx - ringMidR * 0.707, ay: cy - ringMidR * 0.707 },
+            { ax: cx - ringMidR * 0.707, ay: cy + ringMidR * 0.707 },
+          ];
+          // Rough pill size estimate
+          const estW = 100, estH = 50;
+          const fits = (ax, ay) => IW <= 0 || (
+            ax - estW/2 >= 0 && ax + estW/2 <= IW &&
+            ay - estH/2 >= 0 && ay + estH/2 <= IH
+          );
+          const pos = angles.find(p => fits(p.ax, p.ay)) || angles[0];
+          drawValueLabel(ctx, pos.ax, pos.ay, annVal,
+            rInner * 0.46,
+            { color: '#00e5ff', unitColor: 'rgba(0,229,255,0.80)', minFont: 16,
+              bounds: IW > 0 ? {x:0, y:0, w:IW, h:IH} : null });
+        }
       }
     }
   }
@@ -2052,17 +2256,25 @@ class ROIManager {
 
 // ── Shared label renderer ─────────────────────────────────────────────────────
 // availR: approximate radius of the containing area — drives font sizing
-function drawValueLabel(ctx, cx, cy, meanVal, availR) {
+// opts: { color, unitColor, minFont, maxFont }
+function drawValueLabel(ctx, cx, cy, meanVal, availR, opts) {
   if (meanVal === null || meanVal === undefined) return;
+  opts = opts || {};
+  const color     = opts.color     || '#ffffff';
+  const unitColor = opts.unitColor || 'rgba(255,255,255,0.75)';
+  const minFont   = opts.minFont   || 16;
+  const maxFont   = opts.maxFont   || 54;
+  const bounds    = opts.bounds    || null;
 
   const txt  = meanVal.toFixed(2);
   const unit = 'cd/m²';
 
-  const PAD_X = 14, PAD_Y = 7, LINE_GAP = 4;
-  const fz = Math.max(12, Math.min(32, availR * 1.1));
-  const uz = Math.max(9,  fz * 0.58);
+  const fz = Math.max(minFont, Math.min(maxFont, availR * 1.4));
+  const uz = Math.max(11, fz * 0.55);
+  const PAD_X = Math.max(12, fz * 0.45);
+  const PAD_Y = Math.max(7, fz * 0.28);
+  const LINE_GAP = Math.max(4, fz * 0.12);
 
-  // Measure with correct fonts FIRST, then compute box
   ctx.font = `bold ${fz}px "Share Tech Mono"`;
   const tw = ctx.measureText(txt).width;
   ctx.font = `${uz}px "Share Tech Mono"`;
@@ -2071,47 +2283,67 @@ function drawValueLabel(ctx, cx, cy, meanVal, availR) {
   const contentW = Math.max(tw, uw);
   const boxW = contentW + PAD_X * 2;
   const boxH = fz + uz + LINE_GAP + PAD_Y * 2;
-  const bx = cx - boxW / 2;
-  const by = cy - boxH / 2;
 
-  // Background pill
-  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  // Clamp centre to keep pill inside bounds
+  let acx = cx, acy = cy;
+  if (bounds) {
+    acx = Math.max(bounds.x + boxW/2 + 2, Math.min(bounds.x + bounds.w - boxW/2 - 2, acx));
+    acy = Math.max(bounds.y + boxH/2 + 2, Math.min(bounds.y + bounds.h - boxH/2 - 2, acy));
+  }
+
+  const bx = acx - boxW / 2;
+  const by = acy - boxH / 2;
+  const radius = Math.max(6, fz * 0.22);
+
+  // Strong dark pill — guarantees contrast regardless of background colour
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
   if (ctx.roundRect) {
-    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 6); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, radius); ctx.fill();
   } else {
     ctx.fillRect(bx, by, boxW, boxH);
   }
-  // Accent border
-  ctx.strokeStyle = 'rgba(139,21,186,0.55)'; ctx.lineWidth = 1;
+  // Coloured border matching the text (helps distinguish white vs cyan labels)
+  ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, fz * 0.045);
   if (ctx.roundRect) {
-    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 6); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, radius); ctx.stroke();
   } else {
     ctx.strokeRect(bx, by, boxW, boxH);
   }
 
   // Value
-  ctx.fillStyle = '#8b15ba';
+  ctx.fillStyle = color;
   ctx.font = `bold ${fz}px "Share Tech Mono"`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.fillText(txt, cx, by + PAD_Y + fz);
+  ctx.fillText(txt, acx, by + PAD_Y + fz);
 
   // Unit
-  ctx.fillStyle = 'rgba(139,21,186,0.70)';
+  ctx.fillStyle = unitColor;
   ctx.font = `${uz}px "Share Tech Mono"`;
-  ctx.fillText(unit, cx, by + PAD_Y + fz + LINE_GAP + uz);
+  ctx.fillText(unit, acx, by + PAD_Y + fz + LINE_GAP + uz);
 
   ctx.textAlign = 'left';
 }
 
 // ═══════════════════════════════════════════════════════
 class Exporter {
-  exportPNG(imgCanvas, legendCanvas, filename, legendParams, roi) {
+  exportPNG(imgCanvas, legendCanvas, filename, legendParams, roi, renderer, crop) {
     const IW = imgCanvas.width;
     const IH = imgCanvas.height;
-    const LEGEND_H = 160;
+    // ── Measure legend height first, then build canvas ──
+    const LEGEND_H = this._measureLegendH(legendParams);
 
-    const W = IW;
-    const H = IH + LEGEND_H;
+    // ── Apply crop ──
+    const cropT = (crop && crop.top    > 0) ? Math.min(crop.top,    IH - 1) : 0;
+    const cropB = (crop && crop.bottom > 0) ? Math.min(crop.bottom, IH - 1 - cropT) : 0;
+    const cropL = (crop && crop.left   > 0) ? Math.min(crop.left,   IW - 1) : 0;
+    const cropR = (crop && crop.right  > 0) ? Math.min(crop.right,  IW - 1 - cropL) : 0;
+    const srcX = cropL;
+    const srcY = cropT;
+    const srcW = Math.max(1, IW - cropL - cropR);
+    const srcH = Math.max(1, IH - cropT - cropB);
+
+    const W = srcW;
+    const H = srcH + LEGEND_H;
     const out = document.createElement('canvas');
     out.width = W; out.height = H;
     const ctx = out.getContext('2d');
@@ -2120,17 +2352,37 @@ class Exporter {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
-    // Draw main image at full resolution
-    ctx.drawImage(imgCanvas, 0, 0);
+    // Draw cropped region of main image
+    ctx.drawImage(imgCanvas, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
-    // Draw ROI overlay at full image resolution (no viewer scale/translate)
-    if (roi && roi._grid) {
-      this._drawGridOverlay(ctx, roi._grid, IW, IH);
+    // ── Draw all ROI overlays at full image resolution, offset by crop ──
+    if (roi) {
+      ctx.save();
+      ctx.translate(-srcX, -srcY);
+      ctx.beginPath();
+      ctx.rect(srcX, srcY, srcW, srcH);
+      ctx.clip();
+      if (roi._points && roi._points.length > 0 && renderer) {
+        this._drawPointsOverlay(ctx, roi._points, renderer);
+      }
+      if (roi._rect) {
+        this._drawRectOverlay(ctx, roi._rect, roi._rectStats);
+      }
+      if (roi._grid) {
+        this._drawGridOverlay(ctx, roi._grid, IW, IH);
+      }
+      if (roi._circle) {
+        this._drawCircleOverlay(ctx, roi._circle);
+      }
+      if (roi._ring) {
+        this._drawRingOverlay(ctx, roi._ring, {x:srcX, y:srcY, w:srcW, h:srcH});
+      }
+      ctx.restore();
     }
 
     // Draw horizontal legend below the image
     if (legendParams) {
-      this._drawHorizontalLegend(ctx, 0, IH, W, LEGEND_H, legendParams);
+      this._drawHorizontalLegend(ctx, 0, srcH, W, LEGEND_H, legendParams);
     }
 
     out.toBlob(blob => {
@@ -2173,61 +2425,61 @@ class Exporter {
         const cell = cells[cellIdx++];
         if (!cell || !cell.stats) continue;
 
-        const txt  = cell.stats.mean.toFixed(2);
+        const txt  = this._fmtL(cell.stats.mean);
         const unit = 'cd/m²';
         const cellCx = cx + cw/2;
         const cellCy = cy + ch/2;
 
-        // Font size: generous for export (min 12px, scales with cell)
-        const fontSize = Math.max(20, Math.min(56, cw/3, ch/1.6));
-        const unitSize = Math.max(14, fontSize * 0.6);
+        // Font size: ~13% of cell width (+15%), bounded 13–32px
+        const fontSize = Math.max(13, Math.min(32, cw * 0.13, ch * 0.23));
+        const unitSize = Math.max(7, fontSize * 0.55);
 
         ctx.font = `bold ${fontSize}px "Arial", sans-serif`;
         const tw = ctx.measureText(txt).width;
         ctx.font = `${unitSize}px "Arial", sans-serif`;
         const uw = ctx.measureText(unit).width;
         const totalW = Math.max(tw, uw);
-        const padX = 8, padY = 6;
+        const padX = Math.max(3, fontSize * 0.28), padY = Math.max(2, fontSize * 0.20);
         const boxW = totalW + padX*2;
-        const boxH = fontSize + unitSize + padY*2 + 4;
+        const boxH = fontSize + unitSize + padY*2 + 2;
 
         if (cw < boxW + 8 || ch < boxH + 8) {
           // Tiny fallback
           ctx.font = `bold ${Math.max(13, fontSize*0.7)}px Arial`;
-          ctx.fillStyle = '#8b15ba';
+          ctx.fillStyle = '#ffffff';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(txt, cellCx, cellCy);
           continue;
         }
 
-        // Background pill
+        // Background pill — strong dark for guaranteed contrast
         const bx = cellCx - boxW/2, by = cellCy - boxH/2;
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillStyle = 'rgba(0,0,0,0.80)';
         if (ctx.roundRect) {
           ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 6); ctx.fill();
         } else {
           ctx.fillRect(bx, by, boxW, boxH);
         }
 
-        // Thin accent border
-        ctx.strokeStyle = 'rgba(180,60,255,0.5)';
-        ctx.lineWidth = 1;
+        // Thin cyan border
+        ctx.strokeStyle = 'rgba(0,229,255,0.7)';
+        ctx.lineWidth = 1.5;
         if (ctx.roundRect) {
           ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 6); ctx.stroke();
         } else {
           ctx.strokeRect(bx, by, boxW, boxH);
         }
 
-        // Value
-        ctx.fillStyle = '#8b15ba';
+        // Value — white
+        ctx.fillStyle = '#ffffff';
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(txt, cellCx, cellCy - unitSize/2 - 1);
 
-        // Unit
-        ctx.fillStyle = 'rgba(139,21,186,0.60)';
+        // Unit — cyan
+        ctx.fillStyle = 'rgba(0,229,255,0.85)';
         ctx.font = `${unitSize}px Arial`;
         ctx.fillText(unit, cellCx, cellCy + fontSize/2 + 1);
       }
@@ -2236,26 +2488,215 @@ class Exporter {
     ctx.textAlign = 'left';
   }
 
-  _drawHorizontalLegend(ctx, x0, y0, W, H, {colormap, minL, maxL, scaleMode, unit}) {
+  // ── shared value formatter for overlays (×10ⁿ superscript) ──
+  _fmtL(v) {
+    if (v === null || v === undefined || !isFinite(v)) return '—';
+    const av = Math.abs(v);
+    const supExp = e => String(e).split('').map(c=>({'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'}[c]||c)).join('');
+    if (av >= 1e5) { const e=Math.floor(Math.log10(av)); const m=v/Math.pow(10,e); return (Math.abs(m-Math.round(m))<0.005?Math.round(m):m.toFixed(2).replace(/\.?0+$/,''))+'×10'+supExp(e); }
+    if (av < 0.001 && av > 0) { const e=Math.floor(Math.log10(av)); const m=v/Math.pow(10,e); return (Math.abs(m-Math.round(m))<0.005?Math.round(m):m.toFixed(2).replace(/\.?0+$/,''))+'×10'+supExp(e); }
+    if (av >= 1000) return v.toFixed(1);
+    if (av >= 100)  return v.toFixed(2);
+    if (av >= 10)   return v.toFixed(3);
+    if (av >= 1)    return v.toFixed(4);
+    return v.toFixed(5);
+  }
+
+  // ── shared pill label renderer ──
+  _pillSize(ctx, lines, {fs=22, unitFs=15}={}) {
+    const PAD = 10, GAP = 4;
+    const widths = lines.map((l,i) => { ctx.font = (i===0?`bold ${fs}px`:`${unitFs}px`)+' Arial,sans-serif'; return ctx.measureText(l).width; });
+    const boxW = Math.max(...widths) + PAD*2;
+    const boxH = lines.map((l,i)=>i===0?fs:unitFs).reduce((a,b)=>a+b,0) + GAP*(lines.length-1) + PAD*2;
+    return {boxW, boxH};
+  }
+
+  _drawPill(ctx, cx, cy, lines, {border='rgba(0,229,255,0.85)', bg='rgba(0,0,0,0.82)', fs=22, unitFs=15, bounds=null}={}) {
+    const PAD = 10, GAP = 4;
+    ctx.save();
+    const heights = lines.map((l,i) => i===0 ? fs : unitFs);
+    const widths  = lines.map((l,i) => { ctx.font = (i===0?`bold ${fs}px`:`${unitFs}px`)+' Arial,sans-serif'; return ctx.measureText(l).width; });
+    const boxW = Math.max(...widths) + PAD*2;
+    const boxH = heights.reduce((a,b)=>a+b,0) + GAP*(lines.length-1) + PAD*2;
+    // Clamp centre to keep pill inside bounds
+    let acx = cx, acy = cy;
+    if (bounds) {
+      acx = Math.max(bounds.x + boxW/2 + 2, Math.min(bounds.x + bounds.w - boxW/2 - 2, acx));
+      acy = Math.max(bounds.y + boxH/2 + 2, Math.min(bounds.y + bounds.h - boxH/2 - 2, acy));
+    }
+    const bx = acx - boxW/2, by = acy - boxH/2;
+    ctx.fillStyle = bg;
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 8); ctx.fill(); }
+    else { ctx.fillRect(bx, by, boxW, boxH); }
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 2;
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 8); ctx.stroke(); }
+    else { ctx.strokeRect(bx, by, boxW, boxH); }
+    let ty = by + PAD;
+    lines.forEach((l, i) => {
+      const h = i===0 ? fs : unitFs;
+      ctx.font = (i===0?`bold ${fs}px`:`${unitFs}px`)+' Arial,sans-serif';
+      ctx.fillStyle = i===0 ? '#ffffff' : 'rgba(0,229,255,0.9)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(l, acx, ty);
+      ty += h + GAP;
+    });
+    ctx.restore();
+  }
+
+  _drawPointsOverlay(ctx, points, renderer) {
+    const R = 18;
+    points.forEach((pt, i) => {
+      const {x, y} = pt;
+      const l = renderer.getLuminanceAt(x, y);
+      const label = this._fmtL(l);
+      // Cross marker
+      ctx.save();
+      ctx.strokeStyle = '#ff9100';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x-R,y); ctx.lineTo(x+R,y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x,y-R); ctx.lineTo(x,y+R); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2);
+      ctx.fillStyle = '#ff9100'; ctx.fill();
+      ctx.font = 'bold 18px Arial,sans-serif';
+      ctx.fillStyle = '#ff9100';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillText(`#${i+1}`, x+R+4, y-4);
+      ctx.restore();
+      // Single-value pill: just the luminance
+      this._drawPill(ctx, x, y - R - 36, [label, 'cd/m²'], {border:'rgba(255,145,0,0.9)', fs:22, unitFs:14});
+    });
+  }
+
+  _drawRectOverlay(ctx, rect, stats) {
+    const {x1,y1,x2,y2} = rect;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,229,255,0.9)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([12,6]);
+    ctx.strokeRect(x1, y1, x2-x1, y2-y1);
+    ctx.setLineDash([]);
+    ctx.restore();
+    if (!stats) return;
+    const cx = (x1+x2)/2, cy = (y1+y2)/2;
+    this._drawPill(ctx, cx, cy, [this._fmtL(stats.mean), 'cd/m²'], {border:'rgba(0,229,255,0.85)', fs:30, unitFs:18});
+  }
+
+  _drawCircleOverlay(ctx, circle) {
+    const {cx, cy, r, stats} = circle;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,229,255,0.9)';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,229,255,0.5)';
+    ctx.lineWidth = 1.5;
+    const CR = 12;
+    ctx.beginPath(); ctx.moveTo(cx-CR,cy); ctx.lineTo(cx+CR,cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy-CR); ctx.lineTo(cx,cy+CR); ctx.stroke();
+    ctx.restore();
+    if (!stats) return;
+    this._drawPill(ctx, cx, cy, [this._fmtL(stats.mean), 'cd/m²'], {border:'rgba(0,229,255,0.85)', fs:26, unitFs:16});
+  }
+
+  _drawRingOverlay(ctx, ring, bounds) {
+    const {cx, cy, rInner, rOuter, statsInner, statsRing} = ring;
+    const IW = bounds ? bounds.w : ctx.canvas.width;
+    const IH = bounds ? bounds.h : ctx.canvas.height;
+    const bx0 = bounds ? bounds.x : 0;
+    const by0 = bounds ? bounds.y : 0;
+
+    ctx.save();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(139,21,186,0.95)';
+    ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(139,21,186,0.6)';
+    ctx.setLineDash([8,5]);
+    ctx.beginPath(); ctx.arc(cx, cy, rInner, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    const pillOpts = {border:'rgba(139,21,186,0.9)', fs:24, unitFs:15};
+    const lines    = [this._fmtL(statsRing ? statsRing.mean : null), 'cd/m²'];
+
+    // Centre pill — inside inner circle, clamped to image
+    if (statsInner) {
+      this._drawPill(ctx, cx, cy, [this._fmtL(statsInner.mean), 'cd/m²'],
+        {border:'rgba(255,255,255,0.7)', fs:26, unitFs:16,
+         bounds:{x:bx0, y:by0, w:IW, h:IH}});
+    }
+
+    // Annulus pill — try 4 sides: top, bottom, right, left; pick first that fits inside bounds
+    if (statsRing) {
+      const {boxW, boxH} = this._pillSize(ctx, lines, pillOpts);
+      const GAP_RING = 20; // gap between circle edge and pill edge
+
+      const candidates = [
+        // above
+        { px: cx,          py: cy - rOuter - GAP_RING - boxH/2,  lx: cx, ly: cy - rOuter, dir:'v' },
+        // below
+        { px: cx,          py: cy + rOuter + GAP_RING + boxH/2,  lx: cx, ly: cy + rOuter, dir:'v' },
+        // right
+        { px: cx + rOuter + GAP_RING + boxW/2, py: cy,           lx: cx + rOuter, ly: cy, dir:'h' },
+        // left
+        { px: cx - rOuter - GAP_RING - boxW/2, py: cy,           lx: cx - rOuter, ly: cy, dir:'h' },
+      ];
+
+      // Pick first candidate fully inside image bounds (with 4px margin)
+      const M = 4;
+      const fits = c =>
+        c.px - boxW/2 >= bx0 + M &&
+        c.px + boxW/2 <= bx0 + IW - M &&
+        c.py - boxH/2 >= by0 + M &&
+        c.py + boxH/2 <= by0 + IH - M;
+
+      let chosen = candidates.find(fits) || candidates[0]; // fallback: top
+
+      // Draw connector line from chosen pill edge to circle edge
+      ctx.save();
+      ctx.strokeStyle = 'rgba(139,21,186,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(chosen.lx, chosen.ly);
+      if (chosen.dir === 'v') {
+        ctx.lineTo(chosen.px, chosen.py + (chosen.py < cy ? boxH/2 : -boxH/2));
+      } else {
+        ctx.lineTo(chosen.px + (chosen.px > cx ? -boxW/2 : boxW/2), chosen.py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      this._drawPill(ctx, chosen.px, chosen.py, lines,
+        {...pillOpts, bounds:{x:bx0, y:by0, w:IW, h:IH}});
+    }
+  }
+
+  _measureLegendH(legendParams) {
+    // Dry-run: compute tight height without drawing
+    const PAD_TOP = 8;
+    const barH    = 28;
+    const tickH   = 10;
+    const labelH  = 16; // font 13px, horizontal → straight height
+    const PAD_BOT = 8;
+    return PAD_TOP + barH + tickH + labelH + PAD_BOT;
+  }
+
+    _drawHorizontalLegend(ctx, x0, y0, W, H, {colormap, minL, maxL, scaleMode, unit}) {
     const lut = COLORMAPS[colormap] || COLORMAPS.lmk;
 
-    // Layout — generous padding for document embedding
-    const PAD_L = 120;
-    const PAD_R = 120;
-    const PAD_TOP = 30;
-    const barH = 50;   // thick, visible bar
-    const barY = y0 + PAD_TOP;
-    const barX = x0 + PAD_L;
-    const barW = W - PAD_L - PAD_R;
+    const PAD_L   = 60;
+    const PAD_R   = 70;
+    const PAD_TOP = 8;
+    const barH    = 28;
+    const barY    = y0 + PAD_TOP;
+    const barX    = x0 + PAD_L;
+    const barW    = W - PAD_L - PAD_R;
 
-    // White legend area (document-ready)
+    // White legend area
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(x0, y0, W, H);
-
-    // Thin top separator line
-    ctx.strokeStyle = '#cccccc';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x0 + 40, y0 + 10); ctx.lineTo(x0 + W - 40, y0 + 10); ctx.stroke();
 
     // Draw gradient bar (horizontal)
     for (let i = 0; i < barW; i++) {
@@ -2267,51 +2708,38 @@ class Exporter {
 
     // Border around bar
     ctx.strokeStyle = '#888888';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1;
     ctx.strokeRect(barX - 0.5, barY - 0.5, barW + 1, barH + 1);
 
-    // ── Format value — no e-notation, clean decimal ──
+    // ── Format value ──
     function fmtVal(v) {
       if (v === 0) return '0';
       const av = Math.abs(v);
-      // Use superscript-style ×10ⁿ notation for extremes
-      if (av >= 1e5) {
-        const exp = Math.floor(Math.log10(av));
-        const man = v / Math.pow(10, exp);
-        const ms = man.toFixed(1).replace(/\.0$/, '');
-        return ms + '×10' + String(exp).split('').map(c => '⁰¹²³⁴⁵⁶⁷⁸⁹'[+c]||c).join('');
+      const supExp = e => String(e).split('').map(c=>({'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'}[c]||c)).join('');
+      if (av >= 1e5 || (av < 0.001 && av > 0)) {
+        const e = Math.floor(Math.log10(av));
+        const m = v / Math.pow(10, e);
+        return (Math.abs(m - Math.round(m)) < 0.005 ? Math.round(m) : m.toFixed(2).replace(/\.?0+$/,'')) + '×10' + supExp(e);
       }
-      if (av < 0.001 && av > 0) {
-        const exp = Math.floor(Math.log10(av));
-        const man = v / Math.pow(10, exp);
-        const ms = man.toFixed(1).replace(/\.0$/, '');
-        const supMap = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
-        const supExp = String(exp).split('').map(c => supMap[c]||c).join('');
-        return ms + '×10' + supExp;
-      }
-      if (av >= 10000) return v.toFixed(0);
-      if (av >= 1000)  return v.toFixed(0);
-      if (av >= 100)   return v.toFixed(1);
-      if (av >= 10)    return v.toFixed(2);
-      if (av >= 1)     return v.toFixed(2);
-      if (av >= 0.1)   return v.toFixed(3);
-      return v.toFixed(4);
+      if (av >= 1000) return v.toFixed(0);
+      if (av >= 100)  return v.toFixed(1);
+      if (av >= 10)   return v.toFixed(2);
+      if (av >= 1)    return v.toFixed(3);
+      if (av >= 0.1)  return v.toFixed(4);
+      return v.toFixed(5);
     }
 
     // ── Build ticks ──
     const ticks = [];
-
     if (scaleMode === 'log') {
       const safeMn = Math.max(minL, 1e-10);
       const safeMx = Math.max(maxL, 1e-10);
       if (safeMx <= safeMn) return;
-      const lmn = Math.log10(safeMn);
-      const lmx = Math.log10(safeMx);
+      const lmn = Math.log10(safeMn), lmx = Math.log10(safeMx);
       const lRange = lmx - lmn;
       const pxPerDecade = barW / Math.max(lRange, 0.01);
-      let subMults = pxPerDecade >= 120 ? [1,2,3,5,7] : pxPerDecade >= 60 ? [1,2,5] : [1];
-      const floorDec = Math.floor(lmn), ceilDec = Math.ceil(lmx);
-      for (let dec = floorDec; dec <= ceilDec; dec++) {
+      const subMults = pxPerDecade >= 120 ? [1,2,3,5,7] : pxPerDecade >= 60 ? [1,2,5] : [1];
+      for (let dec = Math.floor(lmn); dec <= Math.ceil(lmx); dec++) {
         for (const m of subMults) {
           const val = m * Math.pow(10, dec);
           if (val < safeMn * 0.9999 || val > safeMx * 1.0001) continue;
@@ -2320,19 +2748,18 @@ class Exporter {
           ticks.push({ t: Math.max(0, Math.min(1, t)), val, major: m === 1 });
         }
       }
-      if (!ticks.some(tk => Math.abs(tk.t) < 0.005)) ticks.push({ t: 0, val: safeMn, major: true });
+      if (!ticks.some(tk => Math.abs(tk.t) < 0.005))     ticks.push({ t: 0, val: safeMn, major: true });
       if (!ticks.some(tk => Math.abs(tk.t - 1) < 0.005)) ticks.push({ t: 1, val: safeMx, major: true });
     } else {
       const range = maxL - minL;
       if (range <= 0) return;
-      const rawStep = range / 8;
-      const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
-      const norm = rawStep / magnitude;
-      let niceStep = norm < 1.5 ? magnitude : norm < 3.5 ? 2*magnitude : norm < 7.5 ? 5*magnitude : 10*magnitude;
+      const rawStep  = range / 8;
+      const mag      = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const norm     = rawStep / mag;
+      const niceStep = norm < 1.5 ? mag : norm < 3.5 ? 2*mag : norm < 7.5 ? 5*mag : 10*mag;
       ticks.push({ t: 0, val: minL, major: true });
       ticks.push({ t: 1, val: maxL, major: true });
-      const firstTick = Math.ceil(minL / niceStep) * niceStep;
-      for (let v = firstTick; v <= maxL + niceStep * 0.001; v += niceStep) {
+      for (let v = Math.ceil(minL / niceStep) * niceStep; v <= maxL + niceStep * 0.001; v += niceStep) {
         v = Math.round(v / niceStep) * niceStep;
         if (v <= minL + niceStep * 0.01 || v >= maxL - niceStep * 0.01) continue;
         const t = (v - minL) / range;
@@ -2341,9 +2768,11 @@ class Exporter {
       }
     }
 
-    // Sort left→right and filter crowded ticks (min 60px apart for readability)
+    // Sort and filter crowded ticks
     ticks.sort((a, b) => a.t - b.t);
-    const minPx = 60;
+    const fontSize = 11;
+    ctx.font = `${fontSize}px Arial, sans-serif`;
+    const minPx = 50;
     const filtered = [];
     let lastPx = -Infinity;
     for (const tk of ticks) {
@@ -2359,40 +2788,50 @@ class Exporter {
       }
     }
 
-    // Draw ticks and labels — dark on white, large font
-    ctx.font = 'bold 18px Arial, sans-serif';
-    ctx.textAlign = 'center';
+    // Draw ticks and horizontal labels
     const tickBotY = barY + barH;
+    const tickH    = 10;
+    const labelY   = tickBotY + tickH + 2;
 
+    ctx.textBaseline = 'top';
     for (const tk of filtered) {
-      const px = tk.px;
-      const isEdge = (tk.t === 0 || tk.t === 1);
+      const px      = tk.px;
+      const isEdge  = (tk.t === 0 || tk.t === 1);
       const isMajor = tk.major;
 
-      // Tick mark below bar
-      const tickH = isEdge ? 14 : (isMajor ? 10 : 6);
-      ctx.fillStyle = isEdge ? '#222222' : (isMajor ? '#444444' : '#888888');
-      ctx.fillRect(px - 1, tickBotY, 2, tickH);
+      // Tick mark
+      ctx.fillStyle = isEdge ? '#222' : (isMajor ? '#444' : '#888');
+      ctx.fillRect(px - 1, tickBotY, 2, isEdge ? tickH : (isMajor ? tickH - 2 : tickH - 4));
 
-      // Label
-      if (isMajor || filtered.length <= 12) {
-        ctx.fillStyle = '#111111';
-        ctx.font = isEdge ? 'bold 18px Arial, sans-serif' : '17px Arial, sans-serif';
-        ctx.fillText(fmtVal(tk.val), px, tickBotY + tickH + 20);
+      // Label — horizontal, centred on tick
+      if (isMajor || filtered.length <= 14) {
+        const label = fmtVal(tk.val);
+        ctx.fillStyle = '#111';
+        ctx.font = isEdge ? `bold ${fontSize}px Arial, sans-serif` : `${fontSize}px Arial, sans-serif`;
+        ctx.textAlign = isEdge && tk.t === 0 ? 'left'
+                      : isEdge && tk.t === 1 ? 'right'
+                      : 'center';
+        // clamp so label doesn't overflow bar edges
+        const lw   = ctx.measureText(label).width;
+        const rawX = px;
+        const clampedX = Math.max(barX, Math.min(barX + barW, rawX));
+        ctx.fillText(label, clampedX, labelY);
       }
     }
 
-    // Unit label — right of bar, prominent
-    ctx.font = 'bold 18px Arial, sans-serif';
-    ctx.fillStyle = '#333333';
+    // Unit label — right of bar
+    ctx.font      = 'bold 12px Arial, sans-serif';
+    ctx.fillStyle = '#333';
     ctx.textAlign = 'left';
-    ctx.fillText('[' + unit + ']', barX + barW + 16, barY + barH / 2 + 7);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('[' + unit + ']', barX + barW + 8, barY + barH / 2);
 
-    // Scale mode indicator — left of bar
+    // Scale mode — left of bar
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#555555';
-    ctx.font = '15px Arial, sans-serif';
-    ctx.fillText(scaleMode === 'log' ? 'LOG' : 'LIN', barX - 12, barY + barH / 2 + 7);
+    ctx.fillStyle = '#666';
+    ctx.font      = '11px Arial, sans-serif';
+    ctx.fillText(scaleMode === 'log' ? 'LOG' : 'LIN', barX - 6, barY + barH / 2);
+    ctx.textBaseline = 'alphabetic';
   }
 
   exportCSV(lum, w, h, filename) {
@@ -2427,6 +2866,7 @@ class App {
       minL: 0, maxL: 1,
       rgbData: null, rawData: null,
       filename: '',
+      crop: { top: 0, bottom: 0, left: 0, right: 0 },
     };
 
     this.sourceCanvas = document.createElement('canvas');
@@ -2470,6 +2910,40 @@ class App {
     dz.addEventListener('drop', e => {
       e.preventDefault(); dz.classList.remove('drag-over');
       const f = e.dataTransfer.files?.[0]; if(f) this.loadFile(f);
+    });
+
+    // ── Global drag-and-drop (anywhere on the window) ──
+    const globalOverlay = document.getElementById('global-drop-overlay');
+    let dragCounter = 0;
+
+    window.addEventListener('dragenter', e => {
+      e.preventDefault();
+      // Only activate if dragging a file
+      if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
+        dragCounter++;
+        globalOverlay.classList.add('active');
+      }
+    });
+
+    window.addEventListener('dragleave', e => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        globalOverlay.classList.remove('active');
+      }
+    });
+
+    window.addEventListener('dragover', e => {
+      e.preventDefault();
+    });
+
+    window.addEventListener('drop', e => {
+      e.preventDefault();
+      dragCounter = 0;
+      globalOverlay.classList.remove('active');
+      dz.classList.remove('drag-over');
+      const f = e.dataTransfer?.files?.[0];
+      if (f) this.loadFile(f);
     });
 
     document.querySelectorAll('[data-mode]').forEach(btn => {
@@ -2568,12 +3042,48 @@ class App {
         maxL: this.state.maxL,
         scaleMode: this.state.scaleMode,
         unit: 'cd/m²',
-      }, this.roi);
+      }, this.roi, this.renderer, this.state.crop);
+    });
+
+    // ── Theme: follow the suite-wide setting (shell broadcasts + localStorage) ──
+    let __at=null; const applyTheme = (light) => { document.documentElement.classList.add('theme-anim'); document.body.classList.add('theme-anim'); document.body.classList.toggle('light', !!light); clearTimeout(__at); __at=setTimeout(()=>{document.documentElement.classList.remove('theme-anim'); document.body.classList.remove('theme-anim');},950); };
+    try { applyTheme(localStorage.getItem('suite-theme') === 'light'); } catch(e) {}
+    window.addEventListener('message', (ev) => {
+      if (ev.data && ev.data.type === 'suite-theme') if(!ev.data.noToggle) applyTheme(ev.data.light);
     });
     document.getElementById('btn-export-csv').addEventListener('click', () => {
       if(!this.renderer.luminance) return;
       const base = this.state.filename.replace('.h5','') || 'lmk';
       this.exporter.exportCSV(this.renderer.luminance, this.renderer.width, this.renderer.height, `${base}-luminance.csv`);
+    });
+
+    // ── Crop controls ──
+    const _updateCrop = () => {
+      const IW = this.renderer ? this.renderer.width  : 0;
+      const IH = this.renderer ? this.renderer.height : 0;
+      const t = Math.max(0, parseInt(document.getElementById('crop-top').value)    || 0);
+      const b = Math.max(0, parseInt(document.getElementById('crop-bottom').value) || 0);
+      const l = Math.max(0, parseInt(document.getElementById('crop-left').value)   || 0);
+      const r = Math.max(0, parseInt(document.getElementById('crop-right').value)  || 0);
+      this.state.crop = { top: t, bottom: b, left: l, right: r };
+      const preview = document.getElementById('crop-preview');
+      if (IW > 0 && IH > 0) {
+        const cw = Math.max(0, IW - l - r);
+        const ch = Math.max(0, IH - t - b);
+        preview.innerHTML = `wynik: <span>${cw} × ${ch} px</span> (z ${IW}×${IH})`;
+      } else if (t || b || l || r) {
+        preview.innerHTML = `przytnij: <span>T${t} B${b} L${l} R${r}</span>`;
+      } else {
+        preview.textContent = 'brak przycięcia';
+      }
+    };
+    ['crop-top','crop-bottom','crop-left','crop-right'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => { _updateCrop(); this._rerenderOverlay(); });
+      document.getElementById(id).addEventListener('change', () => { _updateCrop(); this._rerenderOverlay(); });
+    });
+    document.getElementById('btn-crop-reset').addEventListener('click', () => {
+      ['crop-top','crop-bottom','crop-left','crop-right'].forEach(id => document.getElementById(id).value = 0);
+      _updateCrop(); this._rerenderOverlay();
     });
 
     document.addEventListener('keydown', e => {
@@ -2654,6 +3164,8 @@ class App {
       if (!lum) throw new Error('Luminance dataset not found in file');
 
       this.renderer.setData(lum.data, lum.width, lum.height);
+      this.roi._imgW = lum.width;
+      this.roi._imgH = lum.height;
       this.state.minL = this.renderer.minL;
       this.state.maxL = this.renderer.maxL;
       document.getElementById('range-min').value = this.state.minL.toFixed(4);
@@ -2674,6 +3186,11 @@ class App {
       this._refreshROIAfterLoad();
       this.state.loaded = true;
 
+      // Update crop preview with real image dimensions
+      ['crop-top','crop-bottom','crop-left','crop-right'].forEach(id => {
+        document.getElementById(id).dispatchEvent(new Event('input'));
+      });
+
       progressBar.style.width = '100%';
       setTimeout(() => {
         progressEl.style.display = 'none';
@@ -2693,17 +3210,29 @@ class App {
     const h   = this.renderer.height;
     if (!lum) return;
 
-    // Recompute rect stats for new luminance data
+    // Rect
     if (this.roi._rect) {
-      // _rect coords stay, stats are recalculated on demand in _showAllROIStats
+      const {x1,y1,x2,y2} = this.roi._rect;
+      this.roi._rectStats = this.roi._calcStats(lum, w, h, x1, y1, x2, y2);
     }
 
-    // Recompute grid stats for new luminance data
+    // Grid
     if (this.roi._grid) {
       this.roi.recomputeGrid(lum, w, h);
     }
 
-    // Point luminance values are read live from renderer so no recompute needed
+    // Circle
+    if (this.roi._circle) {
+      const {cx, cy, r} = this.roi._circle;
+      this.roi._circle.stats = this.roi._calcStatsCircle(lum, w, h, cx, cy, r);
+    }
+
+    // Ring
+    if (this.roi._ring) {
+      this.roi._recomputeRing(lum, w, h);
+    }
+
+    // Punkty — wartosci czytane na bieząco z renderer
 
     this._rerenderOverlay();
     this._showAllROIStats();
@@ -2770,20 +3299,19 @@ class App {
       if (this._resizeDrag.target === 'ring' && this.roi._ring) {
         const {cx, cy} = this.roi._ring;
         const d = Math.max(4, Math.sqrt((x-cx)**2+(y-cy)**2));
-        if (this._resizeDrag.part === 'outer') {
-          const rOuter = d;
-          const rInner = Math.min(rOuter * 0.95, Math.max(rOuter * 0.05, this.roi._ring.rInner));
-          const newRatio = rInner / rOuter;
-          this.roi.ringRatio = newRatio;
-          this.roi._ring.rOuter = rOuter;
+        if (this._resizeDrag.part === 'inner') {
+          // Drag inner edge → rInner changes, rOuter derived from ratio
+          const rInner = d;
+          const rOuter = rInner / Math.max(0.05, this.roi.ringRatio);
           this.roi._ring.rInner = rInner;
-          this._updateRatioSlider(newRatio);
+          this.roi._ring.rOuter = rOuter;
         } else {
-          const rInner = Math.min(d, this.roi._ring.rOuter * 0.95);
-          const newRatio = Math.max(0.05, rInner / this.roi._ring.rOuter);
-          this.roi.ringRatio = newRatio;
-          this.roi._ring.rInner = this.roi._ring.rOuter * newRatio;
-          this._updateRatioSlider(newRatio);
+          // Drag outer edge → rOuter changes, update ratio (rInner stays fixed)
+          const rOuter = Math.max(d, this.roi._ring.rInner * 1.05);
+          const newRatio = this.roi._ring.rInner / rOuter;
+          this.roi.ringRatio = Math.max(0.05, Math.min(0.95, newRatio));
+          this.roi._ring.rOuter = rOuter;
+          this._updateRatioSlider(this.roi.ringRatio);
         }
         if (lum) this.roi._recomputeRing(lum, w, h);
       } else if (this._resizeDrag.target === 'circle' && this.roi._circle) {
@@ -2846,7 +3374,72 @@ class App {
   }
 
   _rerenderOverlay() {
-    this.viewer.renderOverlay((ctx,transform) => { this.roi.drawOverlay(ctx,transform); });
+    const crop = this.state.crop;
+    const IW = this.renderer ? this.renderer.width  : 0;
+    const IH = this.renderer ? this.renderer.height : 0;
+    const hasCrop = IW > 0 && IH > 0 && (crop.top || crop.bottom || crop.left || crop.right);
+
+    this.viewer.renderOverlay((ctx, transform) => {
+      // ── Draw ROI tools ──
+      this.roi.drawOverlay(ctx, transform);
+
+      // ── Draw crop overlay ──
+      if (!hasCrop) return;
+      const t = Math.min(crop.top,    IH);
+      const b = Math.min(crop.bottom, IH);
+      const l = Math.min(crop.left,   IW);
+      const r = Math.min(crop.right,  IW);
+
+      const SHADE = 'rgba(0,0,0,0.52)';
+      const EDGE  = 'rgba(255,80,0,0.90)';
+      const EDGE_W = 2 / transform.scale; // always 2px on screen
+
+      ctx.save();
+      ctx.fillStyle = SHADE;
+
+      // Top strip
+      if (t > 0) ctx.fillRect(0, 0, IW, t);
+      // Bottom strip
+      if (b > 0) ctx.fillRect(0, IH - b, IW, b);
+      // Left strip (between top/bottom)
+      if (l > 0) ctx.fillRect(0, t, l, IH - t - b);
+      // Right strip (between top/bottom)
+      if (r > 0) ctx.fillRect(IW - r, t, r, IH - t - b);
+
+      // Orange edge lines at the crop boundary
+      ctx.strokeStyle = EDGE;
+      ctx.lineWidth   = EDGE_W;
+      ctx.setLineDash([8 / transform.scale, 4 / transform.scale]);
+
+      if (t > 0) { ctx.beginPath(); ctx.moveTo(0, t); ctx.lineTo(IW, t); ctx.stroke(); }
+      if (b > 0) { ctx.beginPath(); ctx.moveTo(0, IH - b); ctx.lineTo(IW, IH - b); ctx.stroke(); }
+      if (l > 0) { ctx.beginPath(); ctx.moveTo(l, t); ctx.lineTo(l, IH - b); ctx.stroke(); }
+      if (r > 0) { ctx.beginPath(); ctx.moveTo(IW - r, t); ctx.lineTo(IW - r, IH - b); ctx.stroke(); }
+
+      ctx.setLineDash([]);
+
+      // Labels showing px cut on each edge
+      const labelFs = Math.max(11, Math.min(22, 14 / transform.scale));
+      ctx.font = `bold ${labelFs}px "Share Tech Mono", monospace`;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+
+      const _label = (text, x, y) => {
+        const pad = labelFs * 0.4;
+        const tw  = ctx.measureText(text).width;
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillRect(x - tw/2 - pad, y - labelFs*0.65, tw + pad*2, labelFs*1.3);
+        ctx.fillStyle = '#ff7020';
+        ctx.fillText(text, x, y);
+      };
+
+      if (t > 0) _label(`▲ ${t} px`, IW / 2, t / 2);
+      if (b > 0) _label(`▼ ${b} px`, IW / 2, IH - b / 2);
+      if (l > 0) _label(`◀ ${l}`, l / 2, IH / 2);
+      if (r > 0) _label(`▶ ${r}`, IW - r / 2, IH / 2);
+
+      ctx.restore();
+    });
   }
 
   _onROIUpdate(data) {

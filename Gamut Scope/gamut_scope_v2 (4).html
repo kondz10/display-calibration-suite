@@ -154,7 +154,7 @@ body::after {
   display: flex; align-items: center; justify-content: center;
   padding: 16px;
   position: relative;
-  background: #05050a;
+  background: var(--bg);
 }
 .canvas-wrap { position: relative; }
 canvas {
@@ -330,6 +330,18 @@ canvas {
 }
 .wp-xy-row input:focus { border-color: var(--acc); }
 .wp-btns-v { display: flex; gap: 4px; flex-wrap: wrap; }
+body.light .topbar { background: rgba(255,255,255,.96); }
+body.light .sidebar { background: rgba(255,255,255,.94); }
+body.light .custom-input-panel { background: rgba(255,255,255,.6); }
+body.light canvas { box-shadow: 0 0 0 1px var(--b1); }
+/* Remove the dark vignette glow + soften the heavy panel shadow on light theme */
+body.light::after { background: none; }
+body.light .scope-unit { box-shadow: 0 0 0 1px rgba(160,32,240,.14), 0 8px 28px rgba(0,0,0,.10); }
+body.light::before { background-image:
+  linear-gradient(rgba(0,0,0,.035) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(0,0,0,.035) 1px, transparent 1px); }
+
+html.theme-anim, body.theme-anim, body.theme-anim * { transition: background-color .9s ease, color .9s ease, border-color .9s ease, fill .9s ease, box-shadow .9s ease !important; }
 </style>
 </head>
 <body>
@@ -577,9 +589,10 @@ function ptInLocus(x,y){
 }
 
 /* ── RENDER ── */
+function isLightTheme(){ return document.body.classList.contains('light'); }
 function render(){
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#05050a'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = isLightTheme() ? '#ffffff' : '#05050a'; ctx.fillRect(0,0,W,H);
   drawGrid();
   if(colorCanvas) ctx.drawImage(colorCanvas,0,0);
   drawLocusBorder();
@@ -589,9 +602,10 @@ function render(){
 }
 
 function drawGrid(){
+  const light = isLightTheme();
   ctx.font='14px Share Tech Mono,monospace';
-  ctx.strokeStyle='rgba(30,30,50,.9)'; ctx.lineWidth=.6;
-  ctx.fillStyle='rgba(90,90,120,.65)';
+  ctx.strokeStyle = light ? 'rgba(0,0,0,.12)' : 'rgba(30,30,50,.9)'; ctx.lineWidth=.6;
+  ctx.fillStyle = light ? 'rgba(0,0,0,.55)' : 'rgba(90,90,120,.65)';
   for(let v=0;v<=0.8;v+=0.1){
     const [px]=c2p(v,0);
     ctx.beginPath(); ctx.moveTo(px,H-PAD); ctx.lineTo(px,PAD); ctx.stroke();
@@ -602,7 +616,7 @@ function drawGrid(){
     ctx.beginPath(); ctx.moveTo(PAD,py); ctx.lineTo(W-PAD,py); ctx.stroke();
     if(v>0) ctx.fillText(v.toFixed(1),4,py+5);
   }
-  ctx.fillStyle='rgba(140,140,170,.55)'; ctx.font='15px Share Tech Mono';
+  ctx.fillStyle = light ? 'rgba(0,0,0,.55)' : 'rgba(140,140,170,.55)'; ctx.font='15px Share Tech Mono';
   ctx.fillText('x',W/2,H-10);
   ctx.save(); ctx.translate(16,H/2); ctx.rotate(-Math.PI/2); ctx.fillText('y',0,0); ctx.restore();
 }
@@ -629,7 +643,7 @@ function drawLocusBorder(){
   ctx.beginPath(); ctx.moveTo(dense[0][0],dense[0][1]);
   for(let i=1;i<dense.length;i++) ctx.lineTo(dense[i][0],dense[i][1]);
   ctx.closePath();
-  ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=1.6; ctx.lineJoin='round'; ctx.stroke();
+  ctx.strokeStyle = isLightTheme() ? 'rgba(0,0,0,.5)' : 'rgba(255,255,255,.45)'; ctx.lineWidth=1.6; ctx.lineJoin='round'; ctx.stroke();
 }
 
 function drawWPs(){
@@ -1008,5 +1022,34 @@ fitCanvas();
 setTimeout(()=>{ buildColorCanvas(); render(); }, 60);
 render();
 </script>
+<style>
+/* ── Suite light theme (purple accents preserved) — injected ── */
+body.light {
+  --bg: #f4f4f7;
+  --red: #d11030;
+  --canvas-bg: #dcdce2;
+  --s1: #ffffff;
+  --s2: #f6f6f9;
+  --s3: #eef0f3;
+  --b1: #e0e1e7;
+  --b2: #d2d4dc;
+  --b3: #c2c4cc;
+  --acc2: #7b10c8;
+  --t3: #9a9aa6;
+}
+</style>
+<script>
+/* Suite-wide theme listener (shell broadcasts + shared localStorage) */
+(function(){
+  var __at=null; function applyTheme(light){ if(!document.body) return; document.documentElement.classList.add('theme-anim'); document.body.classList.add('theme-anim'); document.body.classList.toggle('light', !!light); clearTimeout(__at); __at=setTimeout(function(){document.documentElement.classList.remove('theme-anim'); document.body.classList.remove('theme-anim');},950); }
+  function readLS(){ try { return localStorage.getItem('suite-theme')==='light'; } catch(e){ return false; } }
+  applyTheme(readLS());
+  document.addEventListener('DOMContentLoaded', function(){ applyTheme(readLS()); });
+  window.addEventListener('message', function(ev){
+    if(ev.data && ev.data.type==='suite-theme'){ if(!ev.data.noToggle) applyTheme(ev.data.light); try{ render(); }catch(e){} }
+  });
+})();
+</script>
+
 </body>
 </html>

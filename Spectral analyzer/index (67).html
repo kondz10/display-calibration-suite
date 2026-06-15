@@ -366,7 +366,7 @@
   textarea#rawdata {
     width: 100%;
     height: 200px;
-    background: #050505;
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 10px;
     color: #6a8aaa;
@@ -666,7 +666,7 @@
     align-items: center;
   }
   .copy-select {
-    background: #050505;
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 10px;
     color: var(--text);
@@ -678,7 +678,7 @@
     letter-spacing: 1px;
   }
   .copy-select:focus { border-color: rgba(139,21,186,0.4); }
-  .copy-select option { background: #0f0f0f; }
+  .copy-select option { background: var(--surface); }
   .btn-copy {
     padding: 8px 18px;
     border: 1px solid #5fc9aa;
@@ -697,7 +697,7 @@
   .copy-textarea {
     width: 100%;
     height: 220px;
-    background: #050505;
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 10px;
     color: #5fc9aa;
@@ -928,6 +928,8 @@
     animation: fadeIn 0.3s ease;
   }
   @keyframes fadeIn { from { opacity:0; transform: translateY(-3px); } to { opacity:1; transform: translateY(0); } }
+
+html.theme-anim, body.theme-anim, body.theme-anim * { transition: background-color .9s ease, color .9s ease, border-color .9s ease, fill .9s ease, box-shadow .9s ease !important; }
 </style>
 </head>
 <body>
@@ -2263,7 +2265,7 @@ function drawChart(points) {
   const ty = v  => padT + cH - (v-minVal)/(yTop-minVal)*cH;
 
   // Background
-  ctx.fillStyle='#080808'; ctx.fillRect(0,0,W,H);
+  const __light=document.body.classList.contains('light'); ctx.fillStyle=__light?'#ffffff':'#080808'; ctx.fillRect(0,0,W,H);
 
   // Subtle vignette overlay
   const vign = ctx.createRadialGradient(W/2, H/2, cH*0.3, W/2, H/2, W*0.75);
@@ -2306,7 +2308,7 @@ function drawChart(points) {
   ctx.restore();
 
   // Grid lines
-  ctx.strokeStyle='rgba(30,37,53,0.9)';
+  ctx.strokeStyle=__light?'rgba(0,0,0,0.10)':'rgba(30,37,53,0.9)';
   ctx.lineWidth=1;
   for(let wl=400;wl<=760;wl+=40){
     ctx.beginPath();ctx.moveTo(tx(wl),padT);ctx.lineTo(tx(wl),padT+cH);ctx.stroke();
@@ -2330,7 +2332,7 @@ function drawChart(points) {
   ctx.beginPath();
   ctx.moveTo(tx(vis[0][0]),ty(vis[0][1]));
   for(const [wl,v] of vis) ctx.lineTo(tx(wl),ty(v));
-  ctx.strokeStyle='rgba(255,255,255,0.18)';
+  ctx.strokeStyle=__light?'rgba(0,0,0,0.10)':'rgba(255,255,255,0.18)';
   ctx.lineWidth=5;
   ctx.lineJoin='round';
   ctx.stroke();
@@ -2340,7 +2342,7 @@ function drawChart(points) {
   ctx.beginPath();
   ctx.moveTo(tx(vis[0][0]),ty(vis[0][1]));
   for(const [wl,v] of vis) ctx.lineTo(tx(wl),ty(v));
-  ctx.strokeStyle='rgba(255,255,255,0.95)';
+  ctx.strokeStyle=__light?'rgba(20,20,30,0.92)':'rgba(255,255,255,0.95)';
   ctx.lineWidth=1.8;
   ctx.lineJoin='round';
   ctx.stroke();
@@ -2898,10 +2900,10 @@ function drawMultiChart() {
   const ty = v  => padT+cH - (v-globalMin)/rangeY*cH;
 
   // Background
-  ctx.fillStyle='#080808'; ctx.fillRect(0,0,W,H);
+  const __light=document.body.classList.contains('light'); ctx.fillStyle=__light?'#ffffff':'#080808'; ctx.fillRect(0,0,W,H);
 
   // Grid
-  ctx.strokeStyle='rgba(30,37,53,0.9)'; ctx.lineWidth=1;
+  ctx.strokeStyle=__light?'rgba(0,0,0,0.10)':'rgba(30,37,53,0.9)'; ctx.lineWidth=1;
   for(let wl=400;wl<=760;wl+=40){
     ctx.beginPath();ctx.moveTo(tx(wl),padT);ctx.lineTo(tx(wl),padT+cH);ctx.stroke();
   }
@@ -3819,5 +3821,30 @@ function showRestoredBadge(nearId) {
   setTimeout(() => badge.remove(), 3000);
 }
 </script>
+<style>
+/* ── Suite light theme (purple accents preserved) — injected ── */
+body.light {
+  --bg: #f4f4f7;
+  --surface: #ffffff;
+  --border: #d6d8de;
+  --accent: #8b15ba;
+  --text: #1a1a1c;
+  --muted: #8c8c94;
+  --canvas-bg: #dcdce2;
+}
+</style>
+<script>
+/* Suite-wide theme listener (shell broadcasts + shared localStorage) */
+(function(){
+  var __at=null; function applyTheme(light){ if(!document.body) return; document.documentElement.classList.add('theme-anim'); document.body.classList.add('theme-anim'); document.body.classList.toggle('light', !!light); clearTimeout(__at); __at=setTimeout(function(){document.documentElement.classList.remove('theme-anim'); document.body.classList.remove('theme-anim');},950); }
+  function readLS(){ try { return localStorage.getItem('suite-theme')==='light'; } catch(e){ return false; } }
+  applyTheme(readLS());
+  document.addEventListener('DOMContentLoaded', function(){ applyTheme(readLS()); });
+  window.addEventListener('message', function(ev){
+    if(ev.data && ev.data.type==='suite-theme'){ if(!ev.data.noToggle) applyTheme(ev.data.light); try{ const t=document.getElementById('rawdata').value; if(t){ const {points}=parseSpectrum(t); drawChart(points); } if(typeof multiFiles!=='undefined' && multiFiles.length) drawMultiChart(); }catch(e){} }
+  });
+})();
+</script>
+
 </body>
 </html>

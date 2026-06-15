@@ -22,6 +22,20 @@
       --sans: 'Rajdhani', sans-serif;
       --radius: 10px;
     }
+    /* ── Light theme — purple accents preserved ── */
+    body.light {
+      --bg:      #f4f4f7;
+      --surface: #ffffff;
+      --surface2: #eef0f3;
+      --border:  #d6d8de;
+      --accent:  #8b15ba;
+      --accent3: #1a9e1a;
+      --warn:    #d97500;
+      --text:    #1a1a1c;
+      --muted:   #8c8c94;
+      --text2:   #62626a;
+      --text3:   #b4b4bc;
+    }
 
     * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: none; }
 ::-webkit-scrollbar { display: none; }
@@ -240,6 +254,95 @@
       border-color: var(--accent);
     }
 
+    /* ── Animated sun/moon day–night theme switch (in header) ── */
+    .btn-shell-theme {
+      position: absolute;
+      right: 60px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 64px;
+      height: 30px;
+      padding: 0;
+      border: none;
+      background: none;
+      cursor: pointer;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ts-track {
+      position: relative;
+      display: block;
+      width: 64px;
+      height: 30px;
+      border-radius: 30px;
+      overflow: hidden;
+      /* default = DARK theme = night sky */
+      background: linear-gradient(160deg, #1b2950 0%, #0c1430 100%);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06);
+      transition: background .9s ease, box-shadow .9s ease;
+    }
+    body.light .ts-track {
+      /* LIGHT theme = day sky */
+      background: linear-gradient(160deg, #5fb0ef 0%, #9fd4f5 100%);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,.18), 0 0 0 1px rgba(255,255,255,.5);
+    }
+    /* Stars (night) */
+    .ts-stars, .ts-stars::before, .ts-stars::after {
+      position: absolute; border-radius: 50%; background: #fff;
+    }
+    .ts-stars {
+      width: 2px; height: 2px; top: 7px; left: 12px; opacity: .9;
+      box-shadow: 8px 4px 0 -0.3px #fff, 16px -2px 0 -0.6px #fff,
+                  4px 12px 0 -0.6px #fff, 20px 9px 0 -0.3px #fff,
+                  13px 14px 0 -0.7px #fff;
+      transition: opacity .9s ease;
+    }
+    body.light .ts-stars { opacity: 0; }
+    /* Clouds (day) */
+    .ts-clouds {
+      position: absolute; left: 4px; bottom: 3px;
+      width: 26px; height: 12px; opacity: 0;
+      background:
+        radial-gradient(circle at 6px 8px, #fff 5px, transparent 5.5px),
+        radial-gradient(circle at 13px 6px, #fff 6px, transparent 6.5px),
+        radial-gradient(circle at 20px 9px, #fff 5px, transparent 5.5px);
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,.06));
+      transition: opacity .9s ease;
+    }
+    body.light .ts-clouds { opacity: .92; }
+    /* Thumb = moon (dark) / sun (light) */
+    .ts-thumb {
+      position: absolute; top: 4px; left: 4px;
+      width: 22px; height: 22px; border-radius: 50%;
+      /* default = MOON */
+      background: radial-gradient(circle at 35% 35%, #eef0f5 0%, #c4c8d2 70%, #aab0bd 100%);
+      box-shadow: 0 2px 4px rgba(0,0,0,.45), inset -2px -2px 3px rgba(0,0,0,.18);
+      transform: translateX(34px);
+      transition: transform .9s ease, background .9s ease, box-shadow .9s ease;
+    }
+    /* moon craters */
+    .ts-thumb::before {
+      content: ''; position: absolute; border-radius: 50%;
+      width: 5px; height: 5px; top: 5px; left: 11px;
+      background: #aeb4c0;
+      box-shadow: -6px 4px 0 -1px #aeb4c0, 2px 8px 0 -1.5px #aeb4c0;
+      opacity: 1; transition: opacity .9s ease;
+    }
+    body.light .ts-thumb {
+      /* SUN */
+      background: radial-gradient(circle at 38% 35%, #fff7cc 0%, #ffd21a 45%, #ff9d00 100%);
+      box-shadow: 0 0 6px 2px rgba(255,193,7,.75), 0 0 14px 4px rgba(255,160,0,.45), inset -1px -1px 2px rgba(200,120,0,.3);
+      transform: translateX(0);
+    }
+    body.light .ts-thumb::before { opacity: 0; }
+    .btn-shell-theme:hover .ts-thumb { filter: brightness(1.06); }
+    /* Coordinated, uniform colour fade during theme switch (excludes the switch itself) */
+    html.theme-anim,
+    body.theme-anim,
+    body.theme-anim *:not(.ts-thumb):not(.ts-track):not(.ts-stars):not(.ts-clouds) {
+      transition: background-color .9s ease, color .9s ease, border-color .9s ease, fill .9s ease, box-shadow .9s ease !important;
+    }
+
     /* ── Exit fullscreen floating button ── */
     .fs-exit-btn {
       display: none;
@@ -287,6 +390,13 @@
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
           <path d="M1 5V1h4M9 1h4v4M13 9v4h-4M5 13H1V9"/>
         </svg>
+      </button>
+      <button class="btn-shell-theme" id="btn-shell-theme" title="Motyw jasny/ciemny" aria-label="Przełącz motyw dzień/noc">
+        <span class="ts-track">
+          <span class="ts-stars"></span>
+          <span class="ts-clouds"></span>
+          <span class="ts-thumb"></span>
+        </span>
       </button>
       <div class="logo-icon">
         <span class="lr"></span>
@@ -385,6 +495,84 @@
     function toggleShellFS() {
       document.body.classList.toggle('shell-fs');
     }
+
+    // ── Global theme (dark ↔ light) for the whole suite ──
+    function suiteThemeIsLight() {
+      try { return localStorage.getItem('suite-theme') === 'light'; } catch(e) { return false; }
+    }
+    function broadcastTheme(light) {
+      // Apply the class DIRECTLY and synchronously to every same-origin iframe in one
+      // tick, so all transitions start simultaneously. postMessage is async (arrives at
+      // different times → desync), so we use it only as a fallback / to trigger re-renders.
+      document.querySelectorAll('.app-panel iframe').forEach(f => {
+        let direct = false;
+        try {
+          const doc = f.contentDocument;
+          if (doc && doc.body) {
+            doc.documentElement.classList.add('theme-anim');
+            doc.body.classList.add('theme-anim');
+            doc.body.classList.toggle('light', light);
+            clearTimeout(f.__themeAnimT);
+            f.__themeAnimT = setTimeout(() => {
+              try {
+                doc.documentElement.classList.remove('theme-anim');
+                doc.body.classList.remove('theme-anim');
+              } catch(e) {}
+            }, 950);
+            direct = true;
+          }
+        } catch(e) {}
+        // Message: triggers canvas re-renders in diagram tools; applies theme if direct failed
+        try { f.contentWindow.postMessage({ type: 'suite-theme', light: light, noToggle: direct }, '*'); } catch(e) {}
+      });
+    }
+    let __animTimer = null;
+    function applySuiteTheme(light) {
+      // Coordinated uniform fade: add anim class to html+body, toggle, broadcast, then clean up
+      document.documentElement.classList.add('theme-anim');
+      document.body.classList.add('theme-anim');
+      document.body.classList.toggle('light', light);
+      try { localStorage.setItem('suite-theme', light ? 'light' : 'dark'); } catch(e) {}
+      broadcastTheme(light);
+      clearTimeout(__animTimer);
+      __animTimer = setTimeout(() => {
+        document.documentElement.classList.remove('theme-anim');
+        document.body.classList.remove('theme-anim');
+      }, 950);
+    }
+    function toggleSuiteTheme() {
+      applySuiteTheme(!document.body.classList.contains('light'));
+    }
+    // Click + drag interaction on the day/night switch
+    (function(){
+      const btn = document.getElementById('btn-shell-theme');
+      if (!btn) return;
+      let down=false, startX=0, moved=false;
+      btn.addEventListener('pointerdown', e => { down=true; moved=false; startX=e.clientX; });
+      window.addEventListener('pointermove', e => {
+        if(!down) return;
+        if(Math.abs(e.clientX-startX) > 6) moved=true;
+      });
+      window.addEventListener('pointerup', e => {
+        if(!down) return; down=false;
+        if(moved){
+          // decide by drag direction: right→night(dark), left→day(light)
+          const goLight = (e.clientX - startX) < 0;
+          applySuiteTheme(goLight);
+        } else {
+          toggleSuiteTheme(); // simple click
+        }
+      });
+    })();
+    // Re-send theme to an iframe once it finishes loading (e.g. first view of a tab)
+    document.querySelectorAll('.app-panel iframe').forEach(f => {
+      f.addEventListener('load', () => {
+        const light = suiteThemeIsLight();
+        try { f.contentWindow.postMessage({ type: 'suite-theme', light: light }, '*'); } catch(e) {}
+      });
+    });
+    // Apply saved theme on shell load
+    applySuiteTheme(suiteThemeIsLight());
 
     document.addEventListener('keydown', e => {
       const tag = document.activeElement && document.activeElement.tagName;
